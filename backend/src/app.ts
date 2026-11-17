@@ -59,6 +59,23 @@ export const createApp = (): Express => {
   Logger.info('[AppInit] Step 8: Mounting API v1 routes at /api/v1...');
   app.use('/api/v1', apiV1Routes);
 
+  // Step 8.5: Handle root index route with helpful system links
+  app.get('/', (_req: Request, res: Response) => {
+    Logger.info('[AppInit] Root index route accessed');
+    ApiResponse.success(
+      res,
+      {
+        name: 'Modern CRM Platform API',
+        version: '1.0.0',
+        status: 'UP',
+        apiDocs: '/api/docs',
+        apiBase: '/api/v1',
+        frontendUrl: env.FRONTEND_URL,
+      },
+      'Welcome to Modern CRM Platform API. Visit /api/docs for documentation.'
+    );
+  });
+
   // Step 9: Handle 404 for undefined routes
   app.use('*', (req: Request, res: Response) => {
     Logger.warn(`[RouteNotFound] 404 Not Found: ${req.method} ${req.originalUrl}`);

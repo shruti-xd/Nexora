@@ -1,0 +1,88 @@
+// =============================================================================
+// Frontend Type Definitions
+// =============================================================================
+
+export type RoleName = 'ADMIN' | 'MANAGER' | 'SALES_REP' | 'VIEWER';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  fullName: string;
+  avatarUrl?: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface Organization {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: string;
+  updatedAt?: string;
+  memberCount?: number;
+  currentUserRole?: RoleName;
+}
+
+export interface Membership {
+  id: string;
+  role: RoleName;
+  isActive: boolean;
+  joinedAt: string;
+}
+
+export interface AuthContextType {
+  user: UserProfile | null;
+  organization: Organization | null;
+  membership: Membership | null;
+  role: RoleName | null;
+  permissions: string[];
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterFormData) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
+}
+
+export interface OrganizationMember {
+  membershipId: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  avatarUrl?: string | null;
+  role: RoleName;
+  roleDescription?: string | null;
+  isMemberActive: boolean;
+  isProfileActive: boolean;
+  joinedAt: string;
+}
+
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface RegisterFormData {
+  fullName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  organizationName: string;
+}
+
+export interface LoginFormData {
+  email: string;
+  password: string;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+  error?: {
+    code: string;
+    details: unknown;
+  };
+}

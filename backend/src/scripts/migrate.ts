@@ -1,10 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import pg from 'pg';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // =============================================================================
 // Database Migration & Seed Runner
@@ -28,8 +24,9 @@ async function runMigration() {
     await client.connect();
     console.log('[MigrationRunner] Step 1: Connected successfully to PostgreSQL database');
 
+    const cwd = process.cwd();
     // Step 2: Read and execute initial schema migration
-    const migrationPath = path.resolve(__dirname, '../../../supabase/migrations/20261117000001_initial_schema.sql');
+    const migrationPath = path.resolve(cwd, 'supabase/migrations/20261117000001_initial_schema.sql');
     console.log(`[MigrationRunner] Step 2: Reading schema migration from: ${migrationPath}`);
     const migrationSql = fs.readFileSync(migrationPath, 'utf-8');
 
@@ -38,7 +35,7 @@ async function runMigration() {
     console.log('[MigrationRunner] Step 2: Schema migration applied successfully!');
 
     // Step 3: Read and execute initial seed script
-    const seedPath = path.resolve(__dirname, '../../../supabase/seed.sql');
+    const seedPath = path.resolve(cwd, 'supabase/seed.sql');
     console.log(`[MigrationRunner] Step 3: Reading seed SQL from: ${seedPath}`);
     const seedSql = fs.readFileSync(seedPath, 'utf-8');
 

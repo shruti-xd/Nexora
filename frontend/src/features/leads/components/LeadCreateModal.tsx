@@ -63,22 +63,22 @@ export const LeadCreateModal: React.FC<LeadCreateModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-xl rounded-2xl border border-surface-200 shadow-2xl overflow-hidden">
+      <div className="bg-white w-full max-w-xl rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 bg-brand-900 text-white flex items-center justify-between">
+        <div className="px-6 py-4 bg-indigo-600 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-brand-800 flex items-center justify-center">
-              <UserPlus className="w-4 h-4 text-brand-300" />
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/50 flex items-center justify-center">
+              <UserPlus className="w-4 h-4 text-white" />
             </div>
             <div>
               <h3 className="text-base font-bold">New Sales Lead</h3>
-              <p className="text-xs text-brand-200">Capture lead contact details and estimated deal value</p>
+              <p className="text-xs text-indigo-100">Capture lead contact details and estimated deal value</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-brand-300 hover:text-white hover:bg-brand-800 transition"
+            className="p-1 rounded-lg text-indigo-200 hover:text-white hover:bg-indigo-500 transition"
           >
             <X className="h-5 w-5" />
           </button>
@@ -227,7 +227,7 @@ export const LeadCreateModal: React.FC<LeadCreateModalProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs transition disabled:opacity-50"
+              className="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-xs transition disabled:opacity-50"
             >
               {isSubmitting ? 'Creating...' : 'Create Lead'}
             </button>

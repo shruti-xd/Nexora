@@ -86,3 +86,19 @@ export interface ApiResponse<T> {
     details: unknown;
   };
 }
+
+export interface Account {
+  id: string;
+  organization_id: string;
+  name: string;
+  website: string | null;
+  phone: string | null;
+  industry: string | null;
+  annual_revenue: number | null;
+  employee_count: number | null;
+  billing_address: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type AccountFormData = Omit<Account, 'id' | 'organization_id' | 'created_at' | 'updated_at'>;

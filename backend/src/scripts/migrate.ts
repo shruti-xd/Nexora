@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import pg from 'pg';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(process.cwd(), 'backend/.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 // =============================================================================
 // Database Migration & Seed Runner
@@ -10,12 +14,28 @@ import pg from 'pg';
 async function runMigration() {
   console.log('[MigrationRunner] Step 1: Connecting to Supabase PostgreSQL...');
 
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const databasePassword = process.env.SUPABASE_DB_PASSWORD;
+
+  if (!supabaseUrl || !databasePassword) {
+    throw new Error(
+      'SUPABASE_URL and SUPABASE_DB_PASSWORD must be set before running database migrations.'
+    );
+  }
+
+  let projectRef: string;
+  try {
+    projectRef = new URL(supabaseUrl).hostname.split('.')[0];
+  } catch {
+    throw new Error('SUPABASE_URL is not a valid URL.');
+  }
+
   const client = new pg.Client({
-    host: 'db.flkzhcvpajttpotokngs.supabase.co',
+    host: `db.${projectRef}.supabase.co`,
     port: 5432,
     database: 'postgres',
     user: 'postgres',
-    password: 'ShrutiSomesh@123456',
+    password: databasePassword,
     ssl: { rejectUnauthorized: false },
   });
 
@@ -49,7 +69,9 @@ async function runMigration() {
     const appliedSet = new Set(appliedRes.rows.map((r) => r.version));
 
     const cwd = process.cwd();
-    const rootDir = fs.existsSync(path.resolve(cwd, 'supabase')) ? cwd : path.resolve(cwd, '..');
+    const rootDir = fs.existsSync(path.resolve(cwd, 'supabase'))
+      ? cwd
+      : path.resolve(cwd, '..');
     const migrationsDir = path.resolve(rootDir, 'supabase/migrations');
     const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
 
@@ -85,6 +107,11 @@ async function runMigration() {
       await client.query(seedSql);
       console.log('[MigrationRunner] Step 3: Seed script executed successfully');
     }
+
+    // Step 4: Verify seeded roles
+    console.log('[MigrationRunner] Step 4: Verifying seeded system roles in database...');
+    const rolesRes = await client.query('SELECT id, name FROM roles ORDER BY name;');
+    console.log('[MigrationRunner] Step 4: Available roles:', rolesRes.rows);
 
     // Step 4: Verify CRM tables in schema
     const tablesRes = await client.query(`

@@ -36,6 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setMembership(null);
       setRole(null);
       setPermissions([]);
+      throw err;
     }
   }, []);
 
@@ -55,6 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (err) {
         console.error('[AuthContext] Error retrieving session:', err);
+        setUser(null);
+        setOrganization(null);
+        setMembership(null);
+        setRole(null);
+        setPermissions([]);
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -68,7 +74,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (session) {
-          await refreshProfile();
+          try {
+            await refreshProfile();
+          } catch (err) {
+            console.warn('[AuthContext] Profile synchronization failed after auth event:', err);
+          }
         }
       } else if (event === 'SIGNED_OUT') {
         console.log('[AuthContext] User signed out. Resetting local state.');
@@ -104,8 +114,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       console.log('[AuthContext] Step 3: Supabase signInWithPassword succeeded. Synchronizing profile...');
-      if (data.session) {
+      if (!data.session) {
+        throw new Error('Login succeeded but no authentication session was created.');
+      }
+
+      try {
         await refreshProfile();
+      } catch (err) {
+        await supabase.auth.signOut();
+        throw err instanceof Error
+          ? err
+          : new Error('Login succeeded but the CRM profile could not be loaded.');
       }
     } finally {
       setIsLoading(false);
@@ -135,7 +154,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
 
-      await refreshProfile();
+      try {
+        await refreshProfile();
+      } catch (err) {
+        await supabase.auth.signOut();
+        throw err instanceof Error
+          ? err
+          : new Error('Registration succeeded but the CRM profile could not be loaded.');
+      }
     } finally {
       setIsLoading(false);
     }

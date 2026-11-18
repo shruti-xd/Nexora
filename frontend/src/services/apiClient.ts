@@ -53,7 +53,16 @@ export async function request<T>(
     console.log(`[ApiClient] Step 4: Received response [${res.status}] from ${endpoint}`);
 
     // Parse JSON envelope
-    const data: ApiResponse<T> = await res.json();
+    let data: ApiResponse<T>;
+    try {
+      data = await res.json();
+    } catch {
+      throw new ApiError(
+        `Server returned an invalid response (${res.status}).`,
+        'INVALID_SERVER_RESPONSE',
+        res.status
+      );
+    }
 
     // Step 5: Check business response status
     if (!res.ok || !data.success) {

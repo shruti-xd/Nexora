@@ -114,7 +114,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         <div className="p-5 bg-surface-900 text-white flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-brand-500/30 text-brand-200 border border-brand-400/30">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
                 Lead
               </span>
               <LeadStatusBadge status={lead.status} />
@@ -122,7 +122,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             <h2 className="text-lg font-bold mt-2">
               {lead.first_name} {lead.last_name}
             </h2>
-            <p className="text-xs text-surface-300">
+            <p className="text-xs text-slate-300">
               {lead.title ? `${lead.title} at ` : ''}
               <strong>{lead.company}</strong> · {lead.email}
             </p>
@@ -150,14 +150,14 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex border-b border-surface-200 bg-surface-50 px-5">
+        <div className="flex border-b border-slate-200 bg-slate-50 px-5">
           <button
             type="button"
             onClick={() => setActiveTab('timeline')}
             className={`py-3 px-3 text-xs font-semibold border-b-2 transition ${
               activeTab === 'timeline'
-                ? 'border-brand-600 text-brand-700 bg-white'
-                : 'border-transparent text-surface-500 hover:text-surface-900'
+                ? 'border-indigo-600 text-indigo-700 bg-white'
+                : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
           >
             Activity Timeline ({activities.length})
@@ -167,8 +167,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
             onClick={() => setActiveTab('details')}
             className={`py-3 px-3 text-xs font-semibold border-b-2 transition ${
               activeTab === 'details'
-                ? 'border-brand-600 text-brand-700 bg-white'
-                : 'border-transparent text-surface-500 hover:text-surface-900'
+                ? 'border-indigo-600 text-indigo-700 bg-white'
+                : 'border-transparent text-slate-500 hover:text-slate-900'
             }`}
           >
             Lead Information
@@ -222,7 +222,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
                     <button
                       type="submit"
                       disabled={isSubmittingActivity || !actSubject.trim()}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold transition disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition disabled:opacity-50"
                     >
                       <Send className="w-3 h-3" />
                       <span>{isSubmittingActivity ? 'Saving...' : `Log ${actType}`}</span>

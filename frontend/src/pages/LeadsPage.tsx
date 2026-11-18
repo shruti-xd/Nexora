@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Users2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LeadsTable } from '../features/leads/components/LeadsTable';
 import { LeadCreateModal } from '../features/leads/components/LeadCreateModal';
 import { LeadConvertModal } from '../features/leads/components/LeadConvertModal';
@@ -93,18 +93,21 @@ export const LeadsPage: React.FC = () => {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-surface-900">
-              Leads Pipeline
-            </h1>
-            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
-              {totalLeads} Records
-            </span>
-          </div>
-          <p className="text-xs sm:text-sm text-surface-500 mt-1">
-            Capture, qualify, and convert prospect leads into company accounts and pipeline deals.
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+            Leads
+          </h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            Click any Lead to open its dedicated Activity Timeline & custom fields.
           </p>
         </div>
+        <button
+          type="button"
+          onClick={() => setIsCreateModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-xs transition self-start sm:self-auto"
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Lead</span>
+        </button>
       </div>
 
       {/* Temporary Feedback Notification */}

@@ -51,7 +51,7 @@ export const LoginForm: React.FC = () => {
       await login(values.email, values.password);
 
       console.log('[LoginForm] Authentication successful. Navigating to dashboard...');
-      navigate('/dashboard');
+      navigate('/dashboard', { replace: true });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Invalid credentials. Please verify your email and password.';
       console.warn('[LoginForm] Login error:', msg);

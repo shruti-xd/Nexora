@@ -10,14 +10,19 @@ export const AccountsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-surface-900 tracking-tight">Accounts</h2>
-          <p className="text-sm text-surface-500 mt-1">Manage customer and prospect companies.</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-surface-900 tracking-tight">Accounts</h2>
+          <p className="text-sm text-surface-500 mt-1">
+            Click any account to open its detail view and manage company information.
+          </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)}>
+        <Button
+          onClick={() => setIsCreateOpen(true)}
+          className="self-start sm:self-auto"
+        >
           <Plus className="w-4 h-4" />
-          Create Account
+          New Account
         </Button>
       </div>
 

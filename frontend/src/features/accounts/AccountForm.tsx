@@ -14,6 +14,8 @@ const accountSchema = z.object({
   website: z.string().trim().optional(),
   phone: z.string().trim().optional(),
   industry: z.string().trim().optional(),
+  city: z.string().trim().optional(),
+  tier: z.string().trim().optional(),
   annual_revenue: z.string().trim().optional(),
   employee_count: z.string().trim().optional(),
   billing_address: z.string().trim().optional(),
@@ -42,6 +44,8 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSuccess, on
       website: account?.website ?? '',
       phone: account?.phone ?? '',
       industry: account?.industry ?? '',
+      city: account?.city ?? '',
+      tier: account?.tier ?? 'Growth',
       annual_revenue: account?.annual_revenue?.toString() ?? '',
       employee_count: account?.employee_count?.toString() ?? '',
       billing_address: account?.billing_address ?? '',
@@ -79,6 +83,9 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSuccess, on
         website: values.website || null,
         phone: values.phone || null,
         industry: values.industry || null,
+        city: values.city || null,
+        tier: values.tier || 'Growth',
+        owner_id: account?.owner_id ?? null,
         annual_revenue: revenue,
         employee_count: employeeCount,
         billing_address: values.billing_address || null,
@@ -106,7 +113,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSuccess, on
       {errorMessage && <Alert variant="error" title="Could not save account">{errorMessage}</Alert>}
 
       <Input
-        label="Name"
+        label="Account Name *"
         placeholder="Acme Corporation"
         error={errors.name?.message}
         {...register('name')}
@@ -133,13 +140,38 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSuccess, on
           {...register('industry')}
         />
         <Input
-          label="Annual Revenue"
+          label="Headquarters"
+          placeholder="Bengaluru, IN"
+          error={errors.city?.message}
+          {...register('city')}
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-surface-700 mb-1.5">
+          Custom Fields (Account)
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-surface-600 mb-1.5">Customer Tier</label>
+            <select
+              className="flex h-10 w-full rounded-lg border border-surface-300 bg-white px-3 text-sm text-surface-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              {...register('tier')}
+            >
+              <option value="Enterprise">Enterprise</option>
+              <option value="Strategic">Strategic</option>
+              <option value="Mid-Market">Mid-Market</option>
+              <option value="Growth">Growth</option>
+            </select>
+          </div>
+          <Input
+            label="Annual Revenue"
           type="number"
           step="0.01"
           placeholder="1000000"
           error={errors.annual_revenue?.message}
           {...register('annual_revenue')}
-        />
+          />
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Input

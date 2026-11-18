@@ -94,6 +94,9 @@ export interface Account {
   website: string | null;
   phone: string | null;
   industry: string | null;
+  city: string | null;
+  tier: string | null;
+  owner_id: string | null;
   annual_revenue: number | null;
   employee_count: number | null;
   billing_address: string | null;

@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS update_organizations_updated_at ON organizations;
 CREATE TRIGGER update_organizations_updated_at
     BEFORE UPDATE ON organizations
     FOR EACH ROW
@@ -46,6 +47,7 @@ CREATE TABLE IF NOT EXISTS profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS update_profiles_updated_at ON profiles;
 CREATE TRIGGER update_profiles_updated_at
     BEFORE UPDATE ON profiles
     FOR EACH ROW
@@ -63,6 +65,7 @@ CREATE TABLE IF NOT EXISTS roles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+DROP TRIGGER IF EXISTS update_roles_updated_at ON roles;
 CREATE TRIGGER update_roles_updated_at
     BEFORE UPDATE ON roles
     FOR EACH ROW
@@ -105,6 +108,7 @@ CREATE TABLE IF NOT EXISTS organization_members (
     CONSTRAINT uq_organization_member UNIQUE (organization_id, user_id)
 );
 
+DROP TRIGGER IF EXISTS update_organization_members_updated_at ON organization_members;
 CREATE TRIGGER update_organization_members_updated_at
     BEFORE UPDATE ON organization_members
     FOR EACH ROW

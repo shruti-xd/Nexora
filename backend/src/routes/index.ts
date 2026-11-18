@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authRoutes } from '../modules/auth/auth.routes.js';
 import { organizationRoutes } from '../modules/organizations/organizations.routes.js';
 import { userRoutes } from '../modules/users/users.routes.js';
+import { leadRoutes } from '../modules/leads/leads.routes.js';
 import { ApiResponse } from '../utils/apiResponse.js';
 import { Logger } from '../utils/logger.js';
 
@@ -31,5 +32,6 @@ router.get('/health', (_req, res) => {
 router.use('/auth', authRoutes);
 router.use('/organizations', organizationRoutes);
 router.use('/users', userRoutes);
+router.use('/leads', leadRoutes);
 
 export const apiV1Routes = router;

@@ -54,8 +54,7 @@ export const AppLayout: React.FC = () => {
       name: 'Accounts',
       to: '/accounts',
       icon: Building2,
-      disabled: true,
-      badge: 'Upcoming',
+      isAvailable: true,
     },
     {
       name: 'Contacts',
@@ -102,6 +101,7 @@ export const AppLayout: React.FC = () => {
   // Step 3: Determine page title based on current path
   const getPageTitle = () => {
     if (location.pathname.startsWith('/users')) return 'Team Members';
+    if (location.pathname.startsWith('/accounts')) return 'Accounts';
     if (location.pathname.startsWith('/settings')) return 'Workspace Settings';
     if (location.pathname.startsWith('/dashboard')) return 'Dashboard Overview';
     return 'CRM Platform';

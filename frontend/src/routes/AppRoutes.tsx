@@ -9,6 +9,7 @@ import { RegisterPage } from '../pages/RegisterPage';
 import { ForgotPasswordPage } from '../pages/ForgotPasswordPage';
 import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 import { DashboardPlaceholderPage } from '../pages/DashboardPlaceholderPage';
+import { LeadsPage } from '../pages/LeadsPage';
 import { UsersPage } from '../pages/UsersPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -45,6 +46,7 @@ export const AppRoutes: React.FC = () => {
       >
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPlaceholderPage />} />
+        <Route path="/leads" element={<LeadsPage />} />
         <Route path="/users" element={<UsersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>

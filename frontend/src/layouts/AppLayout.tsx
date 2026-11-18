@@ -47,8 +47,6 @@ export const AppLayout: React.FC = () => {
       name: 'Leads',
       to: '/leads',
       icon: Users2,
-      disabled: true,
-      badge: 'Module 02',
     },
     {
       name: 'Accounts',

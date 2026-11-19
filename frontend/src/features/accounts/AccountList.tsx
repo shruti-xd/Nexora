@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Building2,
   Search,
@@ -229,12 +230,11 @@ export const AccountList: React.FC<AccountListProps> = ({ refreshKey = 0 }) => {
               </tbody>
             </table>
           </div>
-
         </div>
       )}
 
-      {detailAccount && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-surface-950/15">
+      {detailAccount && createPortal(
+        <div className="fixed inset-0 z-[100] flex justify-end bg-surface-950/15" style={{ top: 0, right: 0, bottom: 0, left: 0, height: '100vh' }}>
           <div className="w-full max-w-2xl bg-white h-full shadow-2xl border-l border-surface-200 flex flex-col overflow-hidden">
             <div className="px-5 py-5 bg-surface-900 text-white flex items-start justify-between gap-4">
               <div className="min-w-0">
@@ -476,7 +476,8 @@ export const AccountList: React.FC<AccountListProps> = ({ refreshKey = 0 }) => {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       <AccountModal

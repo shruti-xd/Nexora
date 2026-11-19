@@ -40,8 +40,6 @@ export const AppLayout: React.FC = () => {
       name: 'Dashboard',
       to: '/dashboard',
       icon: LayoutDashboard,
-      isPlaceholder: true,
-      badge: 'Preview',
     },
     {
       name: 'Leads',
@@ -58,28 +56,20 @@ export const AppLayout: React.FC = () => {
       name: 'Contacts',
       to: '/contacts',
       icon: UserSquare2,
-      disabled: true,
-      badge: 'Upcoming',
+      isAvailable: true,
+  
     },
     {
       name: 'Opportunities',
       to: '/opportunities',
       icon: TrendingUp,
       disabled: true,
-      badge: 'Upcoming',
     },
     {
       name: 'Activities',
       to: '/activities',
       icon: CalendarCheck,
       disabled: true,
-      badge: 'Upcoming',
-    },
-    {
-      name: 'Team Members',
-      to: '/users',
-      icon: Users2,
-      isAvailable: true,
     },
     {
       name: 'Settings',
@@ -129,8 +119,10 @@ export const AppLayout: React.FC = () => {
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-base text-surface-900 block leading-tight">Apex CRM</span>
-              <span className="text-[10px] font-semibold text-brand-600 tracking-wider uppercase block">Module 01</span>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-surface-900 block leading-tight">Nexora CRM</span>
+              </div>
+              <span className="text-[10px] font-semibold text-brand-600 tracking-wide block">Enterprise Platform</span>
             </div>
           </div>
           <button
@@ -141,24 +133,12 @@ export const AppLayout: React.FC = () => {
           </button>
         </div>
 
-        {/* Organization Workspace Pill */}
-        <div className="p-4 border-b border-surface-100 bg-surface-50/50">
-          <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-surface-200 bg-white shadow-xs">
-            <Building className="w-4 h-4 text-surface-400 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-surface-900 truncate">
-                {organization?.name || 'Workspace'}
-              </p>
-              <p className="text-[10px] text-surface-500 truncate">/{organization?.slug || 'crm'}</p>
-            </div>
-            <Badge variant="purple" className="text-[10px] px-1.5 py-0">
-              {role || 'USER'}
-            </Badge>
-          </div>
-        </div>
-
+        
         {/* Navigation Links */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
+          <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-surface-400">
+            CRM Workspace
+          </p>
           {navItems.map((item) => {
             const Icon = item.icon;
 
@@ -173,11 +153,7 @@ export const AppLayout: React.FC = () => {
                     <Icon className="w-4 h-4 text-surface-400" />
                     <span>{item.name}</span>
                   </div>
-                  {item.badge && (
-                    <span className="text-[10px] bg-surface-100 text-surface-500 px-1.5 py-0.5 rounded font-mono font-medium">
-                      {item.badge}
-                    </span>
-                  )}
+                  
                 </div>
               );
             }
@@ -200,33 +176,20 @@ export const AppLayout: React.FC = () => {
                   <Icon className="w-4 h-4" />
                   <span>{item.name}</span>
                 </div>
-                {item.badge && (
-                  <span className="text-[10px] bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded font-medium">
-                    {item.badge}
-                  </span>
-                )}
+                
               </NavLink>
             );
           })}
         </nav>
 
         {/* Sidebar Footer User Info */}
-        <div className="p-4 border-t border-surface-100">
-          <div className="flex items-center gap-3 px-2 py-1.5">
-            <Avatar name={user?.fullName || 'User'} src={user?.avatarUrl} size="sm" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-surface-900 truncate">{user?.fullName}</p>
-              <p className="text-[11px] text-surface-500 truncate">{user?.email}</p>
-            </div>
-          </div>
-        </div>
+        
       </aside>
 
       {/* Main Content Viewport */}
       <div className="flex-1 md:pl-64 flex flex-col min-w-0">
         {/* Top Navigation Bar */}
-        <header className="h-16 bg-white border-b border-surface-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          {/* Mobile Toggle & Breadcrumb */}
+        <header className="relative h-16 bg-white border-b border-surface-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setIsMobileMenuOpen(true)}
@@ -234,21 +197,24 @@ export const AppLayout: React.FC = () => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-lg font-bold text-surface-900 tracking-tight">{getPageTitle()}</h1>
           </div>
 
           {/* Search, Notifications & User Profile Menu */}
           <div className="flex items-center gap-3 sm:gap-4">
             {/* Search Placeholder Input */}
-            <div className="hidden sm:flex items-center relative w-64">
-              <Search className="w-4 h-4 text-surface-400 absolute left-3 pointer-events-none" />
-              <input
-                type="text"
-                placeholder="Search CRM..."
-                disabled
-                className="w-full pl-9 pr-3 py-1.5 bg-surface-50 border border-surface-200 rounded-lg text-xs text-surface-600 cursor-not-allowed opacity-75 placeholder:text-surface-400 focus:outline-none"
-              />
-            </div>
+            {/* Center Search Bar */}
+<div className="hidden sm:block absolute left-1/2 -translate-x-1/2 w-[420px] max-w-[42vw]">
+  <div className="relative flex items-center">
+    <Search className="absolute left-3 h-4 w-4 text-slate-400" />
+    <input
+      type="text"
+      placeholder="Search visible Leads, Accounts, Contacts, Deals..."
+      className="w-full h-9 pl-10 pr-4 rounded-lg border border-surface-200 bg-white text-sm outline-none focus:ring-2 focus:ring-blue-100"
+    />
+  </div>
+</div>
+            
+            
 
             {/* Notification Bell Placeholder */}
             <button

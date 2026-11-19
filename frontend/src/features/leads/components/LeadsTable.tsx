@@ -71,16 +71,16 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
   return (
     <div className="space-y-5">
       {/* Search & Filter Bar */}
-      <div className="bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
+      <div className="bg-white p-3.5 rounded-xl border border-surface-200/90 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-2xs">
         {/* Search Input */}
         <div className="relative flex-1 max-w-sm">
-          <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="h-4 w-4 text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Filter leads by name, company, email..."
-            className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-lg text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="w-full pl-9 pr-3 py-1.5 border border-surface-200 rounded-lg text-xs text-surface-800 placeholder-surface-400 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
           />
         </div>
 
@@ -94,7 +94,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition whitespace-nowrap ${
                 statusFilter === st
                   ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  : 'bg-surface-100 text-surface-600 hover:bg-surface-200'
               }`}
             >
               {st}
@@ -104,16 +104,22 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       </div>
 
       {/* Main Table Card */}
+<<<<<<< HEAD
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {isLoading && leads.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
             <span>Loading leads pipeline...</span>
           </div>
+=======
+      <div className="bg-white rounded-xl border border-surface-200/90 shadow-2xs overflow-hidden">
+        {isLoading ? (
+          <div className="py-12 text-center text-xs text-surface-500">Loading leads pipeline...</div>
+>>>>>>> 73aad5c41363fcb03fdbf4eceb9cfde8c4faf47e
         ) : leads.length === 0 ? (
           <div className="py-12 text-center space-y-3">
-            <h4 className="text-sm font-semibold text-slate-800">No leads found</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <h4 className="text-sm font-semibold text-surface-800">No leads found</h4>
+            <p className="text-xs text-surface-500 max-w-sm mx-auto">
               {searchTerm || statusFilter !== 'All'
                 ? 'No leads match the selected filter. Try adjusting your search query.'
                 : 'Click "+ New Lead" above to create your first prospect.'}
@@ -121,9 +127,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                <tr className="bg-surface-50/80 border-b border-surface-200 text-[10px] font-semibold uppercase tracking-wider text-surface-600">
                   <th className="py-3 px-4">Lead Name</th>
                   <th className="py-3 px-4">Company</th>
                   <th className="py-3 px-4">Lead Status</th>
@@ -133,25 +139,25 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm">
+              <tbody className="divide-y divide-surface-100">
                 {leads.map((lead) => (
-                  <tr key={lead.id} className="hover:bg-slate-50/80 transition group">
+                  <tr key={lead.id} className="hover:bg-surface-50/70 transition group">
                     {/* Lead Name & Email */}
                     <td className="py-3.5 px-4">
                       <button
                         type="button"
                         onClick={() => onSelectLead(lead)}
-                        className="font-semibold text-indigo-600 hover:text-indigo-800 text-left block"
+                        className="font-semibold text-brand-600 hover:text-brand-800 text-left block"
                       >
                         {lead.first_name} {lead.last_name}
                       </button>
-                      <div className="text-xs text-slate-500 mt-0.5">{lead.email}</div>
+                      <div className="text-[11px] text-surface-500 mt-0.5">{lead.email}</div>
                     </td>
 
                     {/* Company & Job Title */}
                     <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900">{lead.company}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">{lead.title || 'Prospect'}</div>
+                      <div className="font-medium text-surface-800">{lead.company}</div>
+                      <div className="text-[11px] text-surface-500 mt-0.5">{lead.title || 'Prospect'}</div>
                     </td>
 
                     {/* Status Badge */}
@@ -160,17 +166,17 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                     </td>
 
                     {/* Est. Deal Value */}
-                    <td className="py-3.5 px-4 font-semibold text-slate-800">
+                    <td className="py-3.5 px-4 font-semibold text-surface-800">
                       ${Number(lead.estimated_value || 0).toLocaleString()}
                     </td>
 
                     {/* Sales Region */}
-                    <td className="py-3.5 px-4 text-xs text-slate-600">
+                    <td className="py-3.5 px-4 text-surface-600">
                       {(lead.custom_fields?.sales_region as string) || lead.source || 'APAC South'}
                     </td>
 
                     {/* Owner */}
-                    <td className="py-3.5 px-4 text-xs text-slate-600">
+                    <td className="py-3.5 px-4 text-surface-600">
                       {lead.profiles?.full_name || 'Rohan Verma'}
                     </td>
 
@@ -188,9 +194,15 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                         )}
                         <button
                           type="button"
+<<<<<<< HEAD
                           onClick={() => onEditLead(lead)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
                           title="Edit Lead"
+=======
+                          onClick={() => onSelectLead(lead)}
+                          className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition"
+                          title="Edit / View Lead"
+>>>>>>> 73aad5c41363fcb03fdbf4eceb9cfde8c4faf47e
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
@@ -201,7 +213,7 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                               onDeleteLead(lead.id);
                             }
                           }}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition"
+                          className="p-1.5 rounded-lg text-surface-400 hover:text-red-600 hover:bg-red-50 transition"
                           title="Delete Lead"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -215,12 +227,41 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           </div>
         )}
 
+<<<<<<< HEAD
         {/* Infinite Scroll Sentinel & Loading Indicator */}
         <div ref={sentinelRef} className="py-4 text-center text-xs text-slate-500 border-t border-slate-100">
           {isLoadingMore ? (
             <div className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Loading more leads...</span>
+=======
+        {/* Pagination Footer */}
+        {totalLeads > 0 && (
+          <div className="p-3.5 border-t border-surface-200/80 bg-surface-50/50 flex items-center justify-between text-xs text-surface-600">
+            <span>
+              Showing {leads.length} of {totalLeads} total leads
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => onPageChange(currentPage - 1)}
+                className="px-3 py-1 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 disabled:opacity-50 transition"
+              >
+                Previous
+              </button>
+              <span className="font-semibold text-surface-900">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage >= totalPages}
+                onClick={() => onPageChange(currentPage + 1)}
+                className="px-3 py-1 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 disabled:opacity-50 transition"
+              >
+                Next
+              </button>
+>>>>>>> 73aad5c41363fcb03fdbf4eceb9cfde8c4faf47e
             </div>
           ) : !hasMore && leads.length > 0 ? (
             <span className="text-slate-400">All {totalLeads} leads loaded</span>

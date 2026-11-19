@@ -71,6 +71,8 @@ ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS shipping_city VARCHAR(100);
 ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS shipping_state VARCHAR(100);
 ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS shipping_country VARCHAR(100);
 ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS shipping_postal_code VARCHAR(20);
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id);
+ALTER TABLE public.accounts ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES public.profiles(id);
 
 -- Step 2: Create contacts table or add missing columns
 CREATE TABLE IF NOT EXISTS public.contacts (
@@ -123,6 +125,8 @@ ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS other_city VARCHAR(100);
 ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS other_state VARCHAR(100);
 ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS other_country VARCHAR(100);
 ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS other_postal_code VARCHAR(20);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id);
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES public.profiles(id);
 
 -- Step 3: Create leads table or add missing columns
 CREATE TABLE IF NOT EXISTS public.leads (
@@ -182,6 +186,8 @@ ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS postal_code VARCHAR(20);
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS converted_at TIMESTAMPTZ;
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS converted_account_id UUID REFERENCES public.accounts(id) ON DELETE SET NULL;
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS converted_contact_id UUID REFERENCES public.contacts(id) ON DELETE SET NULL;
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id);
+ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES public.profiles(id);
 
 -- Step 4: Triggers for automatic updated_at timestamps
 CREATE OR REPLACE TRIGGER update_accounts_updated_at
@@ -528,3 +534,6 @@ BEGIN
             WITH CHECK (auth_user_has_org_membership(organization_id));
     END IF;
 END $$;
+
+-- Reload Supabase PostgREST schema cache
+NOTIFY pgrst, 'reload schema';

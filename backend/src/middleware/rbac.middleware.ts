@@ -5,12 +5,35 @@ import { RoleName } from '../types/db.types.js';
 
 // =============================================================================
 // RBAC Middleware
-// Authorizes requests based on assigned roles and granular permissions
+// Authorizes requests based on Platform Admin status, assigned roles, and granular permissions
 // =============================================================================
 
+// Step 1: Require Platform Administrator privileges
+export const requirePlatformAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  if (!req.userContext) {
+    Logger.warn('[requirePlatformAdmin] Attempted check without requireAuth');
+    ApiResponse.error(res, 'Authentication context missing', 'UNAUTHORIZED', 401);
+    return;
+  }
+
+  if (!req.userContext.isPlatformAdmin) {
+    Logger.warn(`[requirePlatformAdmin] Access denied: User ${req.userContext.id} is not a Platform Admin`);
+    ApiResponse.error(
+      res,
+      'Access denied. Platform Administrator privileges are required.',
+      'FORBIDDEN_PLATFORM_ADMIN',
+      403
+    );
+    return;
+  }
+
+  Logger.info(`[requirePlatformAdmin] Platform Admin authorized: ${req.userContext.id}`);
+  next();
+};
+
+// Step 2: Require specific Organization Role (ADMIN, MANAGER, SALES_REP, VIEWER)
 export const requireRole = (...allowedRoles: RoleName[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
-    // Step 1: Check if userContext is populated by requireAuth
     if (!req.userContext) {
       Logger.warn('[requireRole] Attempted role check without prior requireAuth middleware execution');
       ApiResponse.error(res, 'Authentication context missing', 'UNAUTHORIZED', 401);
@@ -20,8 +43,7 @@ export const requireRole = (...allowedRoles: RoleName[]) => {
     const currentRole = req.userContext.role;
     Logger.debug(`[requireRole] Checking role: User="${req.userContext.id}", Role="${currentRole}", Allowed=[${allowedRoles.join(', ')}]`);
 
-    // Step 2: Validate current user role against allowed list
-    if (!allowedRoles.includes(currentRole)) {
+    if (!currentRole || !allowedRoles.includes(currentRole)) {
       Logger.warn(
         `[requireRole] Access denied: User ${req.userContext.id} with role "${currentRole}" attempted access requiring [${allowedRoles.join(', ')}]`
       );
@@ -39,25 +61,24 @@ export const requireRole = (...allowedRoles: RoleName[]) => {
   };
 };
 
+// Step 3: Require granular Organization Permission
 export const requirePermission = (resource: string, action: string) => {
   const requiredPermName = `${resource}:${action}`;
 
   return (req: Request, res: Response, next: NextFunction): void => {
-    // Step 1: Ensure authentication context exists
     if (!req.userContext) {
       Logger.warn('[requirePermission] Attempted permission check without requireAuth');
       ApiResponse.error(res, 'Authentication context missing', 'UNAUTHORIZED', 401);
       return;
     }
 
-    // Step 2: Admins automatically satisfy all organization-level CRM permissions
+    // Admins automatically satisfy all organization-level CRM permissions
     if (req.userContext.role === 'ADMIN') {
       Logger.debug(`[requirePermission] Admin bypass granted for permission "${requiredPermName}"`);
       next();
       return;
     }
 
-    // Step 3: Check granular permissions array
     const userPermissions = req.userContext.permissions || [];
     const hasPermission = userPermissions.includes(requiredPermName);
 

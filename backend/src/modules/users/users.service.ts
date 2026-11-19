@@ -1,29 +1,40 @@
 import { supabaseAdmin } from '../../config/supabase.js';
-import { AuthUserContext, UpdateUserRoleDTO, UpdateUserStatusDTO } from '../../types/api.types.js';
+import { AuthUserContext, InviteUserDTO, UpdateUserRoleDTO, UpdateUserStatusDTO } from '../../types/api.types.js';
 import { AuditService } from '../../services/audit.service.js';
 import { Logger } from '../../utils/logger.js';
+import { RoleName } from '../../types/db.types.js';
 
 // =============================================================================
 // Users Service
-// Manages team member listing, role assignment, and activation status
+// Manages organization user directory, role governance, and secure invitations
 // =============================================================================
 
 export class UsersService {
-  // Step 1: List organization members with search and pagination
+  // Step 1: List organization members with search, filters, and pagination
   public static async listMembers(
     context: AuthUserContext,
-    options: { page?: number; limit?: number; search?: string }
+    options: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      role?: RoleName;
+      status?: 'active' | 'deactivated' | 'pending';
+    }
   ) {
+    if (!context.activeOrganization) {
+      throw new Error('Active organization context is required');
+    }
+
     const orgId = context.activeOrganization.id;
     const page = options.page || 1;
     const limit = options.limit || 10;
     const offset = (page - 1) * limit;
 
     Logger.info(
-      `[UsersService.listMembers] Step 1: Fetching members for org ${orgId} (Page=${page}, Limit=${limit}, Search="${options.search || ''}")`
+      `[UsersService.listMembers] Step 1: Querying members for org ${orgId} (Page=${page}, Limit=${limit}, Search="${options.search || ''}", Role=${options.role || 'ALL'}, Status=${options.status || 'ALL'})`
     );
 
-    // Build query for organization members joined with profiles and roles
+    // Build base query
     let query = supabaseAdmin
       .from('organization_members')
       .select(
@@ -33,26 +44,43 @@ export class UsersService {
         user_id,
         role_id,
         is_active,
+        invitation_status,
+        invited_by,
+        invited_at,
         joined_at,
         created_at,
         updated_at,
-        profiles!inner (id, full_name, email, avatar_url, is_active),
+        profiles!user_id!inner (id, full_name, email, avatar_url, is_active, invitation_status),
         roles!inner (id, name, description)
       `,
         { count: 'exact' }
       )
       .eq('organization_id', orgId);
 
-    // Step 2: Apply search filtering if provided
+    // Filter by role
+    if (options.role) {
+      query = query.eq('roles.name', options.role);
+    }
+
+    // Filter by status
+    if (options.status === 'active') {
+      query = query.eq('is_active', true).eq('invitation_status', 'ACCEPTED');
+    } else if (options.status === 'deactivated') {
+      query = query.eq('is_active', false);
+    } else if (options.status === 'pending') {
+      query = query.eq('invitation_status', 'PENDING');
+    }
+
+    // Apply search filter
     if (options.search && options.search.trim().length > 0) {
       const searchTerm = options.search.trim();
       Logger.debug(`[UsersService.listMembers] Applying search filter for: "${searchTerm}"`);
       query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`, {
-        foreignTable: 'profiles',
+        foreignTable: 'profiles!user_id',
       });
     }
 
-    // Step 3: Apply pagination and sorting
+    // Pagination and sorting
     query = query
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -65,10 +93,10 @@ export class UsersService {
     }
 
     Logger.info(
-      `[UsersService.listMembers] Step 3 completed: Retrieved ${members?.length || 0} records (Total: ${count || 0})`
+      `[UsersService.listMembers] Step 1 completed: Retrieved ${members?.length || 0} records (Total: ${count || 0})`
     );
 
-    // Step 4: Map records to consistent DTO format
+    // Format DTO
     const formattedMembers = (members || []).map((m: any) => ({
       membershipId: m.id,
       userId: m.user_id,
@@ -79,6 +107,9 @@ export class UsersService {
       roleDescription: m.roles?.description,
       isMemberActive: m.is_active,
       isProfileActive: m.profiles?.is_active,
+      invitationStatus: m.invitation_status || m.profiles?.invitation_status || 'ACCEPTED',
+      invitedBy: m.invited_by,
+      invitedAt: m.invited_at,
       joinedAt: m.joined_at,
     }));
 
@@ -95,6 +126,7 @@ export class UsersService {
 
   // Step 2: Retrieve single organization member details
   public static async getMemberById(context: AuthUserContext, targetUserId: string) {
+    if (!context.activeOrganization) throw new Error('Active organization context is required');
     const orgId = context.activeOrganization.id;
     Logger.info(`[UsersService.getMemberById] Querying member ${targetUserId} in org ${orgId}`);
 
@@ -107,10 +139,13 @@ export class UsersService {
         user_id,
         role_id,
         is_active,
+        invitation_status,
+        invited_by,
+        invited_at,
         joined_at,
         created_at,
         updated_at,
-        profiles!inner (id, full_name, email, avatar_url, is_active),
+        profiles!user_id!inner (id, full_name, email, avatar_url, is_active, invitation_status),
         roles!inner (id, name, description)
       `
       )
@@ -134,29 +169,265 @@ export class UsersService {
       roleDescription: m.roles?.description,
       isMemberActive: m.is_active,
       isProfileActive: m.profiles?.is_active,
+      invitationStatus: m.invitation_status,
+      invitedBy: m.invited_by,
+      invitedAt: m.invited_at,
       joinedAt: m.joined_at,
       updatedAt: m.updated_at,
     };
   }
 
-  // Step 3: Update organization member role
+  // Step 3: Invite new user to the organization
+  public static async inviteUser(context: AuthUserContext, dto: InviteUserDTO) {
+    if (!context.activeOrganization) {
+      throw new Error('Active organization context required to invite users');
+    }
+
+    const orgId = context.activeOrganization.id;
+    const orgName = context.activeOrganization.name;
+    const email = dto.email.trim().toLowerCase();
+
+    Logger.info(`[UsersService.inviteUser] Step 1: Admin ${context.id} inviting "${email}" with role "${dto.role}" to org ${orgId}`);
+
+    // Rule 1: Cannot invite yourself
+    if (email === context.email.toLowerCase()) {
+      Logger.warn('[UsersService.inviteUser] Security check failed: User attempted to invite self');
+      throw new Error('You cannot invite yourself to your own organization.');
+    }
+
+    // Rule 2: Verify target organization is active
+    if (context.activeOrganization.status === 'SUSPENDED') {
+      throw new Error('Cannot invite users to a suspended organization.');
+    }
+
+    // Step 2: Check for existing organization membership
+    Logger.info('[UsersService.inviteUser] Step 2: Checking for existing organization membership...');
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id, email')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (existingProfile) {
+      const { data: existingMember } = await supabaseAdmin
+        .from('organization_members')
+        .select('id, is_active')
+        .eq('organization_id', orgId)
+        .eq('user_id', existingProfile.id)
+        .maybeSingle();
+
+      if (existingMember && existingMember.is_active) {
+        Logger.warn(`[UsersService.inviteUser] User ${email} is already an active member of org ${orgId}`);
+        throw new Error('A user with this email address is already an active member of this organization.');
+      }
+    }
+
+    // Step 3: Resolve requested role ID
+    Logger.info(`[UsersService.inviteUser] Step 3: Resolving role definition for "${dto.role}"...`);
+    const { data: roleRecord, error: roleError } = await supabaseAdmin
+      .from('roles')
+      .select('id, name')
+      .eq('name', dto.role)
+      .single();
+
+    if (roleError || !roleRecord) {
+      throw new Error(`Invalid role specified: ${dto.role}`);
+    }
+
+    // Step 4: Dispatch Supabase Auth invitation
+    Logger.info(`[UsersService.inviteUser] Step 4: Dispatching Supabase Auth invitation email to ${email}...`);
+    let invitedUserId: string;
+
+    // Check if auth account already exists
+    const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+    const existingAuth = userList?.users.find((u) => u.email?.toLowerCase() === email);
+
+    if (existingAuth) {
+      invitedUserId = existingAuth.id;
+      Logger.info(`[UsersService.inviteUser] Reusing existing Supabase Auth user ID: ${invitedUserId}`);
+    } else {
+      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        email,
+        {
+          data: {
+            full_name: dto.fullName,
+            organization_id: orgId,
+            organization_name: orgName,
+            invited_by: context.id,
+          },
+        }
+      );
+
+      if (inviteError || !inviteData.user) {
+        Logger.warn(`[UsersService.inviteUser] inviteUserByEmail note: ${inviteError?.message}. Creating placeholder user...`);
+        const tempPassword = `Nexora@${Math.random().toString(36).substring(2, 10)}!`;
+        const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password: tempPassword,
+          email_confirm: false,
+          user_metadata: { full_name: dto.fullName },
+        });
+
+        if (createError || !createdUser.user) {
+          throw new Error(`Failed to create invitation account: ${createError?.message || inviteError?.message}`);
+        }
+        invitedUserId = createdUser.user.id;
+      } else {
+        invitedUserId = inviteData.user.id;
+      }
+    }
+
+    // Step 5: Upsert user profile
+    Logger.info('[UsersService.inviteUser] Step 5: Upserting user profile record...');
+    await supabaseAdmin.from('profiles').upsert({
+      id: invitedUserId,
+      full_name: dto.fullName,
+      email,
+      is_active: true,
+      invitation_status: 'PENDING',
+      updated_at: new Date().toISOString(),
+    });
+
+    // Step 6: Create or update organization membership with PENDING status
+    Logger.info('[UsersService.inviteUser] Step 6: Creating organization membership record...');
+    const { data: member, error: memberError } = await supabaseAdmin
+      .from('organization_members')
+      .upsert(
+        {
+          organization_id: orgId,
+          user_id: invitedUserId,
+          role_id: roleRecord.id,
+          is_active: true,
+          invitation_status: 'PENDING',
+          invited_by: context.id,
+          invited_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'organization_id,user_id' }
+      )
+      .select('id, organization_id, user_id, role_id, is_active, invitation_status, invited_at')
+      .single();
+
+    if (memberError) {
+      Logger.error(`[UsersService.inviteUser] Failed to save membership: ${memberError.message}`);
+      throw new Error(`Failed to establish organization membership: ${memberError.message}`);
+    }
+
+    // Step 7: Record audit log
+    await AuditService.log({
+      organizationId: orgId,
+      userId: context.id,
+      action: 'MEMBER_INVITED',
+      resource: 'organization_members',
+      resourceId: member?.id,
+      metadata: {
+        invited_email: email,
+        invited_name: dto.fullName,
+        assigned_role: dto.role,
+        invited_by: context.id,
+      },
+    });
+
+    Logger.info(`[UsersService.inviteUser] Step 7 completed: Invitation successfully issued to ${email}`);
+
+    return {
+      membershipId: member?.id,
+      userId: invitedUserId,
+      fullName: dto.fullName,
+      email,
+      role: dto.role,
+      invitationStatus: 'PENDING',
+      invitedAt: member?.invited_at,
+    };
+  }
+
+  // Step 4: Resend invitation email
+  public static async resendInvitation(context: AuthUserContext, targetUserId: string) {
+    if (!context.activeOrganization) throw new Error('Active organization context required');
+    const orgId = context.activeOrganization.id;
+
+    Logger.info(`[UsersService.resendInvitation] Resending invitation to user ${targetUserId} in org ${orgId}`);
+
+    // Fetch member
+    const { data: member, error: memberError } = await supabaseAdmin
+      .from('organization_members')
+      .select('id, user_id, invitation_status, profiles!user_id(email, full_name)')
+      .eq('organization_id', orgId)
+      .eq('user_id', targetUserId)
+      .single();
+
+    if (memberError || !member) {
+      throw new Error('Member not found in this organization');
+    }
+
+    const email = (member as any).profiles?.email;
+    const fullName = (member as any).profiles?.full_name;
+
+    if (!email) throw new Error('Target user email address not found');
+
+    // Trigger Supabase invitation email
+    const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      data: {
+        full_name: fullName,
+        organization_id: orgId,
+        organization_name: context.activeOrganization.name,
+      },
+    });
+
+    if (inviteError) {
+      Logger.warn(`[UsersService.resendInvitation] inviteUserByEmail note: ${inviteError.message}`);
+    }
+
+    // Update invited_at timestamp
+    const now = new Date().toISOString();
+    await supabaseAdmin
+      .from('organization_members')
+      .update({
+        invited_at: now,
+        invitation_status: 'PENDING',
+        updated_at: now,
+      })
+      .eq('id', member.id);
+
+    // Record audit log
+    await AuditService.log({
+      organizationId: orgId,
+      userId: context.id,
+      action: 'INVITATION_RESENT',
+      resource: 'organization_members',
+      resourceId: member.id,
+      metadata: { target_email: email, target_user_id: targetUserId },
+    });
+
+    Logger.info(`[UsersService.resendInvitation] Invitation resent to ${email}`);
+
+    return {
+      success: true,
+      message: `Invitation resent successfully to ${email}`,
+      invitedAt: now,
+    };
+  }
+
+  // Step 5: Update organization member role
   public static async updateMemberRole(
     context: AuthUserContext,
     targetUserId: string,
     dto: UpdateUserRoleDTO
   ) {
+    if (!context.activeOrganization) throw new Error('Active organization context required');
     const orgId = context.activeOrganization.id;
+
     Logger.info(
       `[UsersService.updateMemberRole] Step 1: Admin ${context.id} requesting role change for user ${targetUserId} to ${dto.role}`
     );
 
-    // Rule 1: User cannot modify their own role
+    // Rule: User cannot modify their own role
     if (context.id === targetUserId) {
-      Logger.warn(`[UsersService.updateMemberRole] Security violation: User ${context.id} tried to modify their own role`);
+      Logger.warn(`[UsersService.updateMemberRole] Security violation: User ${context.id} tried to modify own role`);
       throw new Error('Users are not permitted to modify their own role.');
     }
 
-    // Step 2: Verify target user belongs to current organization
+    // Verify target user belongs to current organization
     const { data: targetMember, error: memberError } = await supabaseAdmin
       .from('organization_members')
       .select('id, user_id, role_id, roles(id, name)')
@@ -165,15 +436,14 @@ export class UsersService {
       .single();
 
     if (memberError || !targetMember) {
-      Logger.warn(`[UsersService.updateMemberRole] Target member ${targetUserId} does not belong to org ${orgId}`);
+      Logger.warn(`[UsersService.updateMemberRole] Target member ${targetUserId} not found in org ${orgId}`);
       throw new Error('Target user does not belong to this organization.');
     }
 
     const currentTargetRole = (targetMember.roles as any)?.name;
 
-    // Step 3: If demoting an ADMIN, ensure at least one other active admin remains
+    // If demoting an ADMIN, ensure at least one other active admin remains
     if (currentTargetRole === 'ADMIN' && dto.role !== 'ADMIN') {
-      Logger.info(`[UsersService.updateMemberRole] Step 3: Checking remaining active ADMIN count before demotion...`);
       const { data: adminRole } = await supabaseAdmin
         .from('roles')
         .select('id')
@@ -189,13 +459,12 @@ export class UsersService {
           .eq('is_active', true);
 
         if ((adminCount || 0) <= 1) {
-          Logger.warn(`[UsersService.updateMemberRole] Cannot demote the last remaining active Admin in org ${orgId}`);
           throw new Error('Cannot demote the only remaining active Administrator in this organization.');
         }
       }
     }
 
-    // Step 4: Resolve new role ID
+    // Resolve new role ID
     const { data: newRole, error: roleError } = await supabaseAdmin
       .from('roles')
       .select('id, name')
@@ -203,11 +472,10 @@ export class UsersService {
       .single();
 
     if (roleError || !newRole) {
-      Logger.error(`[UsersService.updateMemberRole] Role "${dto.role}" not found in database`);
       throw new Error(`Invalid role specified: ${dto.role}`);
     }
 
-    // Step 5: Update organization membership role
+    // Update role
     const { data: updatedMember, error: updateError } = await supabaseAdmin
       .from('organization_members')
       .update({
@@ -219,11 +487,10 @@ export class UsersService {
       .single();
 
     if (updateError || !updatedMember) {
-      Logger.error(`[UsersService.updateMemberRole] Update failed: ${updateError?.message}`);
       throw new Error('Failed to update member role');
     }
 
-    // Step 6: Record audit log for role change
+    // Record audit log
     await AuditService.log({
       organizationId: orgId,
       userId: context.id,
@@ -238,9 +505,7 @@ export class UsersService {
       },
     });
 
-    Logger.info(
-      `[UsersService.updateMemberRole] Step 6 completed: User ${targetUserId} role updated from ${currentTargetRole} to ${dto.role}`
-    );
+    Logger.info(`[UsersService.updateMemberRole] Role updated for ${targetUserId} to ${dto.role}`);
 
     return {
       membershipId: updatedMember.id,
@@ -250,24 +515,24 @@ export class UsersService {
     };
   }
 
-  // Step 4: Update member active/inactive status
+  // Step 6: Update member active/inactive status
   public static async updateMemberStatus(
     context: AuthUserContext,
     targetUserId: string,
     dto: UpdateUserStatusDTO
   ) {
+    if (!context.activeOrganization) throw new Error('Active organization context required');
     const orgId = context.activeOrganization.id;
+
     Logger.info(
       `[UsersService.updateMemberStatus] Step 1: Admin ${context.id} requesting status change for ${targetUserId} to isActive=${dto.isActive}`
     );
 
-    // Rule 1: User cannot deactivate themselves
+    // Rule: User cannot deactivate themselves
     if (context.id === targetUserId && !dto.isActive) {
-      Logger.warn(`[UsersService.updateMemberStatus] Security violation: User ${context.id} tried to deactivate themselves`);
       throw new Error('You cannot deactivate your own account.');
     }
 
-    // Step 2: Fetch target member details
     const { data: targetMember, error: memberError } = await supabaseAdmin
       .from('organization_members')
       .select('id, user_id, role_id, is_active, roles(name)')
@@ -276,11 +541,10 @@ export class UsersService {
       .single();
 
     if (memberError || !targetMember) {
-      Logger.warn(`[UsersService.updateMemberStatus] Member not found in org: ${targetUserId}`);
       throw new Error('Target user does not belong to this organization.');
     }
 
-    // Step 3: Prevent deactivating the last active Admin
+    // Prevent deactivating last active admin
     const targetRole = (targetMember.roles as any)?.name;
     if (targetRole === 'ADMIN' && !dto.isActive) {
       const { data: adminRole } = await supabaseAdmin
@@ -298,13 +562,11 @@ export class UsersService {
           .eq('is_active', true);
 
         if ((adminCount || 0) <= 1) {
-          Logger.warn(`[UsersService.updateMemberStatus] Cannot deactivate the only active Admin in org ${orgId}`);
           throw new Error('Cannot deactivate the only active Administrator in this organization.');
         }
       }
     }
 
-    // Step 4: Update membership status
     const { data: updatedMember, error: updateError } = await supabaseAdmin
       .from('organization_members')
       .update({
@@ -316,11 +578,9 @@ export class UsersService {
       .single();
 
     if (updateError || !updatedMember) {
-      Logger.error(`[UsersService.updateMemberStatus] Status update error: ${updateError?.message}`);
       throw new Error('Failed to update member status');
     }
 
-    // Step 5: Record audit log for status change
     await AuditService.log({
       organizationId: orgId,
       userId: context.id,
@@ -334,10 +594,6 @@ export class UsersService {
         performed_by: context.id,
       },
     });
-
-    Logger.info(
-      `[UsersService.updateMemberStatus] Step 5 completed: Member ${targetUserId} status updated to ${dto.isActive}`
-    );
 
     return {
       membershipId: updatedMember.id,

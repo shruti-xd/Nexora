@@ -1,4 +1,4 @@
-import { Profile, Organization, OrganizationMember, RoleName } from './db.types.js';
+import { Profile, Organization, OrganizationMember, RoleName, OrganizationStatus } from './db.types.js';
 
 // =============================================================================
 // API DTO Types
@@ -9,26 +9,43 @@ export interface AuthUserContext {
   id: string;
   email: string;
   profile: Profile;
-  activeOrganization: Organization;
-  membership: OrganizationMember;
-  role: RoleName;
+  isPlatformAdmin: boolean;
+  activeOrganization?: Organization;
+  membership?: OrganizationMember;
+  role?: RoleName;
   permissions: string[];
 }
 
-export interface RegisterDTO {
+export interface CreateOrganizationDTO {
+  name: string;
+  slug?: string;
+  adminFullName: string;
+  adminEmail: string;
+}
+
+export interface UpdateOrganizationDTO {
+  name?: string;
+  slug?: string;
+}
+
+export interface UpdateOrganizationStatusDTO {
+  status: OrganizationStatus;
+}
+
+export interface AssignOrganizationAdminDTO {
+  adminFullName: string;
+  adminEmail: string;
+}
+
+export interface InviteUserDTO {
   fullName: string;
   email: string;
-  password: string;
-  organizationName: string;
+  role: RoleName;
 }
 
 export interface UpdateProfileDTO {
   fullName?: string;
-  avatarUrl?: string;
-}
-
-export interface UpdateOrganizationDTO {
-  name: string;
+  avatarUrl?: string | null;
 }
 
 export interface UpdateUserRoleDTO {
@@ -43,4 +60,6 @@ export interface PaginationQuery {
   page?: number;
   limit?: number;
   search?: string;
+  role?: RoleName;
+  status?: 'active' | 'deactivated' | 'pending';
 }

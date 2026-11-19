@@ -2,32 +2,24 @@ import { Router } from 'express';
 import { AuthController } from './auth.controller.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
 import { validateRequest } from '../../middleware/validate.middleware.js';
-import { authLimiter } from '../../middleware/rateLimiter.js';
-import { registerSchema, updateProfileSchema } from './auth.validators.js';
+import { updateProfileSchema } from './auth.validators.js';
 
 // =============================================================================
 // Auth Routes
-// Endpoints for user onboarding, self profile inspection, and session updates
+// Endpoints for self profile inspection, profile updates, and session termination
+// (Public self-registration has been completely removed in accordance with Salesforce-style access)
 // =============================================================================
 
 const router = Router();
 
-// Step 1: Public Registration endpoint with rate limiting and schema validation
-router.post(
-  '/register',
-  authLimiter,
-  validateRequest(registerSchema),
-  AuthController.register
-);
-
-// Step 2: Protected self profile endpoint
+// Step 1: Protected self profile endpoint
 router.get(
   '/me',
   requireAuth,
   AuthController.getMe
 );
 
-// Step 3: Protected self profile update endpoint
+// Step 2: Protected self profile update endpoint
 router.patch(
   '/me',
   requireAuth,
@@ -35,7 +27,7 @@ router.patch(
   AuthController.updateMe
 );
 
-// Step 4: Protected logout audit endpoint
+// Step 3: Protected logout audit endpoint
 router.post(
   '/logout',
   requireAuth,

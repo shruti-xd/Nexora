@@ -11,6 +11,10 @@ import { Logger } from '../../utils/logger.js';
 export class OrganizationService {
   // Step 1: Retrieve details of currently active organization
   public static async getCurrent(context: AuthUserContext) {
+    if (!context.activeOrganization) {
+      throw new Error('Active organization context is required');
+    }
+
     const orgId = context.activeOrganization.id;
     Logger.info(`[OrganizationService.getCurrent] Step 1: Querying details for org: ${orgId}`);
 
@@ -43,6 +47,7 @@ export class OrganizationService {
       id: organization.id,
       name: organization.name,
       slug: organization.slug,
+      status: organization.status,
       createdAt: organization.created_at,
       updatedAt: organization.updated_at,
       memberCount: memberCount ?? 1,
@@ -52,6 +57,10 @@ export class OrganizationService {
 
   // Step 3: Update organization name/settings
   public static async updateCurrent(context: AuthUserContext, dto: UpdateOrganizationDTO) {
+    if (!context.activeOrganization) {
+      throw new Error('Active organization context is required');
+    }
+
     const orgId = context.activeOrganization.id;
     Logger.info(`[OrganizationService.updateCurrent] Step 1: Updating organization ${orgId} to name: "${dto.name}"`);
 
@@ -89,6 +98,7 @@ export class OrganizationService {
       id: updatedOrg.id,
       name: updatedOrg.name,
       slug: updatedOrg.slug,
+      status: updatedOrg.status,
       updatedAt: updatedOrg.updated_at,
     };
   }

@@ -5,11 +5,11 @@ import { Logger } from '../../utils/logger.js';
 
 // =============================================================================
 // Users Controller
-// HTTP request handlers for organization user management
+// HTTP request handlers for organization user directory, role governance, and invites
 // =============================================================================
 
 export class UsersController {
-  // Step 1: List organization members
+  // Step 1: List organization members with filters
   public static async listMembers(req: Request, res: Response): Promise<void> {
     try {
       if (!req.userContext) {
@@ -17,10 +17,10 @@ export class UsersController {
         return;
       }
 
-      const { page, limit, search } = req.query as any;
-      Logger.info(`[UsersController.listMembers] Listing members with query: page=${page}, limit=${limit}`);
+      const { page, limit, search, role, status } = req.query as any;
+      Logger.info(`[UsersController.listMembers] Listing members: page=${page}, role=${role}, status=${status}`);
 
-      const result = await UsersService.listMembers(req.userContext, { page, limit, search });
+      const result = await UsersService.listMembers(req.userContext, { page, limit, search, role, status });
       ApiResponse.success(res, result, 'Organization members retrieved successfully');
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to list members';
@@ -50,7 +50,45 @@ export class UsersController {
     }
   }
 
-  // Step 3: Update member role
+  // Step 3: Invite new user to organization
+  public static async inviteUser(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userContext) {
+        ApiResponse.error(res, 'Authentication context missing', 'UNAUTHORIZED', 401);
+        return;
+      }
+
+      Logger.info(`[UsersController.inviteUser] Inviting user "${req.body.email}"`);
+      const result = await UsersService.inviteUser(req.userContext, req.body);
+      ApiResponse.success(res, result, 'Invitation sent successfully', 201);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to invite user';
+      Logger.warn(`[UsersController.inviteUser] Invite error: ${errorMsg}`);
+      const statusCode = errorMsg.includes('already an active member') ? 409 : 400;
+      ApiResponse.error(res, errorMsg, 'INVITATION_FAILED', statusCode);
+    }
+  }
+
+  // Step 4: Resend invitation email
+  public static async resendInvitation(req: Request, res: Response): Promise<void> {
+    try {
+      if (!req.userContext) {
+        ApiResponse.error(res, 'Authentication context missing', 'UNAUTHORIZED', 401);
+        return;
+      }
+
+      const id = String(req.params.id);
+      Logger.info(`[UsersController.resendInvitation] Resending invitation to user: ${id}`);
+      const result = await UsersService.resendInvitation(req.userContext, id);
+      ApiResponse.success(res, result, result.message);
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : 'Failed to resend invitation';
+      Logger.error(`[UsersController.resendInvitation] Error: ${errorMsg}`);
+      ApiResponse.error(res, errorMsg, 'RESEND_INVITATION_FAILED', 400);
+    }
+  }
+
+  // Step 5: Update member role
   public static async updateMemberRole(req: Request, res: Response): Promise<void> {
     try {
       if (!req.userContext) {
@@ -71,7 +109,7 @@ export class UsersController {
     }
   }
 
-  // Step 4: Update member active/inactive status
+  // Step 6: Update member active/inactive status
   public static async updateMemberStatus(req: Request, res: Response): Promise<void> {
     try {
       if (!req.userContext) {

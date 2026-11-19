@@ -16,6 +16,10 @@ export class OrganizationController {
         ApiResponse.error(res, 'Authentication context missing', 'UNAUTHORIZED', 401);
         return;
       }
+      if (!req.userContext.activeOrganization) {
+        ApiResponse.error(res, 'No active organization context found', 'NO_ACTIVE_MEMBERSHIP', 403);
+        return;
+      }
       Logger.info(`[OrganizationController.getCurrent] Request for org: ${req.userContext.activeOrganization.id}`);
       const result = await OrganizationService.getCurrent(req.userContext);
       ApiResponse.success(res, result, 'Current organization retrieved successfully');
@@ -31,6 +35,10 @@ export class OrganizationController {
     try {
       if (!req.userContext) {
         ApiResponse.error(res, 'Authentication context missing', 'UNAUTHORIZED', 401);
+        return;
+      }
+      if (!req.userContext.activeOrganization) {
+        ApiResponse.error(res, 'No active organization context found', 'NO_ACTIVE_MEMBERSHIP', 403);
         return;
       }
       Logger.info(`[OrganizationController.updateCurrent] Updating org: ${req.userContext.activeOrganization.id}`);

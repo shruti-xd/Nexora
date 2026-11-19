@@ -1,15 +1,16 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
 // =============================================================================
 // Public Route Guard
-// Redirects authenticated users away from login/register screens to the dashboard
+// Redirects authenticated users away from login/public screens to their origin or dashboard
 // =============================================================================
 
 export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -20,8 +21,9 @@ export const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children 
   }
 
   if (isAuthenticated) {
-    console.log('[PublicRoute] Already authenticated. Redirecting to /dashboard');
-    return <Navigate to="/dashboard" replace />;
+    const from = (location.state as any)?.from?.pathname || '/dashboard';
+    console.log(`[PublicRoute] User already authenticated. Redirecting to: ${from}`);
+    return <Navigate to={from} replace />;
   }
 
   return <>{children}</>;

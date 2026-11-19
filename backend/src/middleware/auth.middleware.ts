@@ -7,7 +7,7 @@ import { RoleName } from '../types/db.types.js';
 
 // =============================================================================
 // Authentication Middleware
-// Verifies Supabase JWT and constructs verified multi-tenant User Context
+// Verifies Supabase JWT, distinguishes Platform Admins, and enforces Tenant Isolation
 // =============================================================================
 
 export const requireAuth = async (
@@ -17,7 +17,7 @@ export const requireAuth = async (
 ): Promise<void> => {
   try {
     // Step 1: Extract Authorization header
-    Logger.info(`[requireAuth] Authenticating request for path: ${req.path}`);
+    Logger.info(`[requireAuth] Step 1: Authenticating request for path: ${req.path}`);
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -34,7 +34,7 @@ export const requireAuth = async (
     }
 
     // Step 2: Validate token cryptographically with Supabase Auth
-    Logger.debug('[requireAuth] Verifying token signature and claims via Supabase Auth...');
+    Logger.debug('[requireAuth] Step 2: Verifying token signature and claims via Supabase Auth...');
     const { data: authData, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !authData.user) {
@@ -49,9 +49,10 @@ export const requireAuth = async (
     }
 
     const authUser = authData.user;
-    Logger.info(`[requireAuth] Token validated for auth user id: ${authUser.id}`);
+    Logger.info(`[requireAuth] Step 2 completed: Token validated for auth user id: ${authUser.id}`);
 
     // Step 3: Fetch user profile
+    Logger.debug(`[requireAuth] Step 3: Fetching user profile for ${authUser.id}...`);
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('*')
@@ -71,10 +72,38 @@ export const requireAuth = async (
       return;
     }
 
-    // Step 4: Resolve organization context
-    // Check if an explicit organization header is provided or use first active membership
+    // Step 4: Check Platform Admin privileges
+    Logger.debug(`[requireAuth] Step 4: Checking Platform Admin credentials for ${authUser.id}...`);
+    const isPlatformAdmin = Boolean(profile.is_platform_admin);
+
+    // Is this a platform administration route?
+    const isPlatformRoute = req.baseUrl.includes('/platform') || req.path.startsWith('/platform');
+
+    if (isPlatformRoute) {
+      if (!isPlatformAdmin) {
+        Logger.warn(`[requireAuth] Non-platform-admin ${authUser.id} attempted to access platform route ${req.path}`);
+        ApiResponse.error(res, 'Access denied. Platform Administrator privileges are required.', 'FORBIDDEN_PLATFORM_ADMIN', 403);
+        return;
+      }
+
+      // Attach context for platform admin without requiring tenant membership
+      req.token = token;
+      req.userContext = {
+        id: authUser.id,
+        email: authUser.email || profile.email,
+        profile,
+        isPlatformAdmin: true,
+        permissions: ['platform:all'],
+      };
+
+      Logger.info(`[requireAuth] Platform Admin authenticated: User=${authUser.id} (${profile.email})`);
+      next();
+      return;
+    }
+
+    // Step 5: For CRM routes, resolve organization membership
     const requestedOrgId = req.headers['x-organization-id'] as string | undefined;
-    Logger.debug(`[requireAuth] Resolving organization membership (requested: ${requestedOrgId || 'default'})...`);
+    Logger.debug(`[requireAuth] Step 5: Resolving organization membership (requested: ${requestedOrgId || 'default'})...`);
 
     let membershipQuery = supabaseAdmin
       .from('organization_members')
@@ -84,10 +113,13 @@ export const requireAuth = async (
         user_id,
         role_id,
         is_active,
+        invitation_status,
+        invited_by,
+        invited_at,
         joined_at,
         created_at,
         updated_at,
-        organizations (id, name, slug, created_at, updated_at),
+        organizations (id, name, slug, status, created_by, created_at, updated_at),
         roles (id, name, description, is_system_role, created_at, updated_at)
       `)
       .eq('user_id', authUser.id)
@@ -100,10 +132,24 @@ export const requireAuth = async (
     const { data: memberships, error: memberError } = await membershipQuery;
 
     if (memberError || !memberships || memberships.length === 0) {
+      // If user is a platform admin viewing regular routes, allow context without membership
+      if (isPlatformAdmin) {
+        req.token = token;
+        req.userContext = {
+          id: authUser.id,
+          email: authUser.email || profile.email,
+          profile,
+          isPlatformAdmin: true,
+          permissions: ['platform:all'],
+        };
+        next();
+        return;
+      }
+
       Logger.warn(`[requireAuth] No active organization membership found for user ${authUser.id}`);
       ApiResponse.error(
         res,
-        'No active organization membership found. You must belong to an active organization.',
+        'No active organization membership found. You must be invited to an active organization to access CRM functionality.',
         'NO_ACTIVE_MEMBERSHIP',
         403
       );
@@ -120,8 +166,20 @@ export const requireAuth = async (
       return;
     }
 
-    // Step 5: Query role permissions
-    Logger.debug(`[requireAuth] Querying permissions for role: ${roleRecord.name}`);
+    // Step 6: Enforce Organization Status check (Suspended organizations cannot access CRM)
+    if (organization.status === 'SUSPENDED') {
+      Logger.warn(`[requireAuth] Access denied: Organization ${organization.id} (${organization.name}) is SUSPENDED`);
+      ApiResponse.error(
+        res,
+        'Your organization workspace has been suspended. Please contact Nexora platform support.',
+        'ORGANIZATION_SUSPENDED',
+        403
+      );
+      return;
+    }
+
+    // Step 7: Query role permissions
+    Logger.debug(`[requireAuth] Step 7: Querying permissions for role: ${roleRecord.name}`);
     const { data: rolePerms, error: permsError } = await supabaseAdmin
       .from('role_permissions')
       .select('permissions (name)')
@@ -135,12 +193,13 @@ export const requireAuth = async (
       ? rolePerms.map((rp: any) => rp.permissions?.name).filter(Boolean)
       : [];
 
-    // Step 6: Construct and attach AuthUserContext
+    // Step 8: Construct and attach AuthUserContext
     req.token = token;
     req.userContext = {
       id: authUser.id,
       email: authUser.email || profile.email,
       profile,
+      isPlatformAdmin,
       activeOrganization: organization,
       membership: {
         id: primaryMembership.id,
@@ -148,6 +207,9 @@ export const requireAuth = async (
         user_id: primaryMembership.user_id,
         role_id: primaryMembership.role_id,
         is_active: primaryMembership.is_active,
+        invitation_status: primaryMembership.invitation_status,
+        invited_by: primaryMembership.invited_by,
+        invited_at: primaryMembership.invited_at,
         joined_at: primaryMembership.joined_at,
         created_at: primaryMembership.created_at,
         updated_at: primaryMembership.updated_at,
@@ -157,12 +219,12 @@ export const requireAuth = async (
     };
 
     Logger.info(
-      `[requireAuth] Request authenticated: User=${authUser.id}, Org=${organization.id} (${organization.slug}), Role=${roleRecord.name}`
+      `[requireAuth] Request authenticated: User=${authUser.id}, Org=${organization.id} (${organization.slug}, status=${organization.status}), Role=${roleRecord.name}, PlatformAdmin=${isPlatformAdmin}`
     );
 
     next();
   } catch (err: unknown) {
-    // Step 7: Peaceful error handling
+    // Step 9: Peaceful error handling
     const errorMsg = err instanceof Error ? err.message : String(err);
     Logger.error(`[requireAuth] Unexpected authentication error: ${errorMsg}`);
     ApiResponse.error(res, 'Authentication verification failed.', 'AUTH_INTERNAL_ERROR', 500);

@@ -1,15 +1,18 @@
-# Modern CRM Platform — Architecture Documentation
+# Nexora CRM — Architecture Documentation
 
 ## 1. System Overview
 
-The Modern CRM Platform is engineered as a clean, production-grade SaaS application designed to deliver an agile, responsive customer relationship management platform. The initial foundation and Module 01 establish:
-- Secure multi-tenant organization workspaces
-- Supabase Auth cryptographic JWT authentication
-- Granular Role-Based Access Control (RBAC) with database-enforced policies
-- Centralized user profile and organization membership lifecycle management
-- Audit logging for administrative events
+Nexora is engineered as an enterprise-grade SaaS Customer Relationship Management (CRM) platform following a **Salesforce-style organization-controlled access model**.
 
-The platform deliberately avoids bloated architectures (such as asynchronous queue dependencies like Redis/Kafka or separate microservices) in favor of a robust, high-performance **modular monolith** with clear boundary isolation between frontend client, backend Node.js API, and Supabase PostgreSQL.
+Key architectural pillars for Foundation and Module 01 include:
+- **Strict Organization-Controlled Provisioning**: Self-service public user registration and arbitrary organization creation are completely decommissioned.
+- **Two Distinct Administrative Tiers**:
+  1. **Platform Administrator**: Internal Nexora administrator who provisions customer organizations, manages tenant lifecycle states (`ACTIVE` vs `SUSPENDED`), and assigns initial Organization Admins.
+  2. **Organization Administrator**: Customer-level administrator who manages team members, invites users via email, assigns granular organizational roles, and governs member access states.
+- **Unified Authentication Gateway**: All users (Platform Admins, Org Admins, and Organization Members) authenticate through a single, unified Nexora login portal powered by Supabase GoTrue Auth.
+- **Active Membership Enforcement**: A valid Supabase JWT token alone does not grant CRM access. Users must have an active membership in an active organization (or verified Platform Admin status) to access application APIs.
+- **Multi-Tenant Isolation**: Tenant data is isolated cryptographically and logically at the application middleware and PostgreSQL Row-Level Security (RLS) layers.
+- **Modular Monolith**: High cohesion, zero microservice bloat, no external message queue dependencies (no Redis, Kafka, or BullMQ required for core functionality).
 
 ---
 
@@ -17,64 +20,96 @@ The platform deliberately avoids bloated architectures (such as asynchronous que
 
 ```mermaid
 flowchart TD
-    subgraph Client["Frontend (React + Vite + Tailwind CSS)"]
-        UI["React SPA & UI Components"]
-        AuthCtx["Auth Context (Supabase Auth Session)"]
-        ApiClient["Axios / Fetch Client (Bearer JWT + x-organization-id)"]
+    subgraph Client["Frontend (React + Vite + Tailwind CSS + TypeScript)"]
+        LoginPage["Unified Login Page (Supabase Auth)"]
+        CRMWorkspace["CRM Workspace UI (Dashboard, Members, Settings)"]
+        PlatformConsole["Platform Admin Console (/platform/organizations)"]
+        AuthCtx["Auth Context (Session, Profile, Permissions)"]
+        ApiClient["HTTP API Client (Bearer JWT + x-organization-id)"]
     end
 
     subgraph Backend["Backend (Node.js + Express + TypeScript)"]
-        Gateway["Express Router & Security Middleware (Helmet, CORS, RateLimiter)"]
-        AuthMid["Auth Middleware (Supabase JWT Verification)"]
-        RBACMid["RBAC & Permission Middleware (requireRole, requirePermission)"]
+        SecurityGateway["Security Gateway (Helmet, CORS, RateLimiter)"]
+        AuthMid["Auth Middleware (requireAuth + Org Status Check)"]
+        RBACMid["RBAC Guards (requirePlatformAdmin, requireRole, requirePermission)"]
         
-        subgraph Modules["Domain Modules"]
-            AuthMod["Auth Module"]
-            OrgMod["Organizations Module"]
-            UserMod["Users & Members Module"]
+        subgraph Modules["Domain Service Modules"]
+            PlatformMod["Platform Module (Org Provisioning, Tenant Suspension, Admin Assignment)"]
+            UserMod["Users & Team Module (Invitations, Roles, Member Status)"]
+            OrgMod["Organizations Module (Metadata, Context)"]
+            AuthMeMod["Auth Module (/me Profile & Permissions)"]
         end
 
         AuditSvc["Audit Logging Service"]
     end
 
-    subgraph Supabase["Supabase Cloud / Managed PostgreSQL"]
-        SupaAuth["Supabase GoTrue Auth (auth.users)"]
+    subgraph Supabase["Supabase Cloud / PostgreSQL"]
+        SupaAuth["Supabase Auth (auth.users)"]
+        AdminAPI["Supabase Auth Admin SDK (Service Role)"]
+        PlatformAdminsTable[("platform_admins")]
+        OrgTable[("organizations (status: ACTIVE | SUSPENDED)")]
+        ProfilesTable[("profiles (is_platform_admin, invitation_status)")]
+        MembersTable[("organization_members (invitation_status, invited_by)")]
+        RolesPerms[("roles & permissions")]
+        AuditTable[("audit_logs")]
         RLS["PostgreSQL Row Level Security (RLS)"]
-        DBFunc["Transactional Stored Functions (provision_new_organization_and_admin)"]
-        Tables[("PostgreSQL Tables\n(organizations, profiles, roles, permissions, members, audit_logs)")]
     end
 
-    UI --> AuthCtx
-    AuthCtx -->|Login / Refresh / Reset| SupaAuth
-    UI --> ApiClient
-    ApiClient -->|REST API Requests with Bearer JWT| Gateway
-    Gateway --> AuthMid
-    AuthMid -->|Verify JWT Cryptographically| SupaAuth
+    LoginPage -->|signInWithPassword| SupaAuth
+    CRMWorkspace --> ApiClient
+    PlatformConsole --> ApiClient
+    ApiClient -->|REST Bearer Token| SecurityGateway
+    SecurityGateway --> AuthMid
+    AuthMid -->|Verify JWT| SupaAuth
     AuthMid --> RBACMid
     RBACMid --> Modules
-    Modules --> DBFunc
+    PlatformMod --> AdminAPI
+    PlatformMod --> OrgTable
+    UserMod --> AdminAPI
+    UserMod --> MembersTable
     Modules --> AuditSvc
-    Modules --> Tables
-    AuditSvc --> Tables
-    Tables --> RLS
+    AuditSvc --> AuditTable
+    OrgTable --> RLS
+    MembersTable --> RLS
 ```
 
 ---
 
-## 3. Core Architectural Principles
+## 3. Administrative Tiers & Role Specification
 
-1. **Separation of Concerns**: The frontend never communicates with the database directly using privileged keys. The service-role key is kept exclusively on the Node.js backend.
-2. **Identity vs Business Logic**: Supabase Auth manages password hashing, session tokens, refresh cycles, and identity claims. The Node.js backend validates tokens and enforces domain business rules.
-3. **Multi-Tenant Workspace Isolation**: Every tenant belongs to an `organizations` row. Every user is linked through `organization_members`. Queries in subsequent CRM modules are scoped strictly by `organization_id`.
-4. **Defense-in-Depth**:
-   - Level 1: HTTP Security Headers (Helmet), CORS restriction, Rate Limiting.
-   - Level 2: Backend middleware authentication (`requireAuth`) and authorization (`requireRole`, `requirePermission`).
-   - Level 3: Database-level Row-Level Security (RLS) and foreign key constraints.
-5. **Atomic Provisioning**: New organization signup is executed via a PostgreSQL `SECURITY DEFINER` function (`provision_new_organization_and_admin`) guaranteeing that user profiles, workspace records, and Admin role assignments succeed as an atomic transaction.
+### A. Platform Administrator (Internal Nexora Admin)
+- **Scope**: Platform-wide.
+- **Responsibilities**:
+  - Provision new customer tenant organizations.
+  - Update organization names and vanity URL slugs.
+  - Activate or suspend tenant organizations (`status: ACTIVE | SUSPENDED`). When suspended, all members of that tenant are blocked from CRM APIs.
+  - Assign or reassign the primary Organization Administrator.
+  - Manage platform configurations.
+- **Security & Bootstrap**:
+  - Maintained in a dedicated `platform_admins` database table.
+  - Privileges can **never** be obtained via public endpoints or organization role assignments.
+  - Initial platform administrator is provisioned exclusively via secure CLI bootstrap: `npm run bootstrap:admin -- <email> [fullName] [password]`.
+
+### B. Organization Administrator (Tenant Admin)
+- **Scope**: Specific customer organization only.
+- **Responsibilities**:
+  - Invite new team members by email (`email`, `fullName`, `role`).
+  - Resend pending email invitations.
+  - Promote or change user roles (`MANAGER`, `SALES_REP`, `VIEWER`).
+  - Activate / Deactivate members within their organization.
+- **Prohibitions**:
+  - Cannot access other tenant organizations.
+  - Cannot assign Platform Admin rights.
+  - Cannot modify their own role or deactivate the organization's sole active Admin.
+
+### C. Organization Members
+- **MANAGER**: Team supervisor with elevated visibility into assigned records.
+- **SALES_REP**: Operational CRM user managing assigned leads, accounts, contacts, and deals.
+- **VIEWER**: Read-only auditor or stakeholder.
 
 ---
 
-## 4. Multi-Tenant Organization Model
+## 4. Multi-Tenant Relational Schema
 
 ```mermaid
 erDiagram
@@ -83,6 +118,7 @@ erDiagram
     ROLES ||--o{ ORGANIZATION_MEMBERS : assigned_to
     ROLES ||--o{ ROLE_PERMISSIONS : defines
     PERMISSIONS ||--o{ ROLE_PERMISSIONS : granted_via
+    PROFILES ||--o| PLATFORM_ADMINS : elevated_to
     ORGANIZATIONS ||--o{ AUDIT_LOGS : records
     PROFILES ||--o{ AUDIT_LOGS : triggers
 
@@ -90,16 +126,25 @@ erDiagram
         uuid id PK
         string name
         string slug UK
+        string status "ACTIVE | SUSPENDED"
+        uuid created_by FK
         timestamp created_at
         timestamp updated_at
+    }
+
+    PLATFORM_ADMINS {
+        uuid user_id PK,FK
+        timestamp created_at
     }
 
     PROFILES {
         uuid id PK
         string full_name
-        string email
+        string email UK
         string avatar_url
         boolean is_active
+        boolean is_platform_admin
+        string invitation_status "PENDING | ACCEPTED | ACTIVE"
         timestamp created_at
         timestamp updated_at
     }
@@ -110,6 +155,9 @@ erDiagram
         uuid user_id FK
         uuid role_id FK
         boolean is_active
+        string invitation_status "PENDING | ACCEPTED"
+        uuid invited_by FK
+        timestamp invited_at
         timestamp joined_at
     }
 
@@ -141,33 +189,21 @@ erDiagram
 
 ---
 
-## 5. Role-Based Access Control (RBAC) Specification
+## 5. Security & Request Lifecycle
 
-| Role | Scope | Key Capabilities | Prohibitions |
-| :--- | :--- | :--- | :--- |
-| **ADMIN** | Organization Wide | Full control over organization settings, member management, role assignment, status toggling, and all future CRM resources. | Cannot modify their own role or deactivate the organization's sole active Admin. |
-| **MANAGER** | Team / Org Scope | Read organization and team members; full management of assigned CRM records. | Cannot modify organization settings, invite admins, or alter roles. |
-| **SALES_REP**| Assigned Scope | Create, update, and manage assigned CRM records (leads, accounts, contacts, deals). | Cannot alter team membership or modify other users' roles. |
-| **VIEWER** | Read-Only | Read-only access across authorized CRM records. | Cannot create, update, or delete records. |
-
----
-
-## 6. Request Lifecycle & Authorization Flow
-
-1. **Client Request**: Frontend issues an HTTP request to `http://localhost:5000/api/v1/...` including:
-   - Header: `Authorization: Bearer <supabase_access_token>`
-   - Optional Header: `x-organization-id: <uuid>` (for multi-workspace users)
-2. **CORS & Rate Limiter**: Express evaluates origin and request rate limits.
-3. **Authentication Middleware (`requireAuth`)**:
-   - Calls `supabaseAdmin.auth.getUser(token)` to verify the cryptographically signed JWT.
-   - Verifies the user is active in `profiles`.
-   - Resolves active organization membership from `organization_members`.
-   - Resolves associated role and granted permissions.
-   - Populates `req.userContext`.
-4. **RBAC Middleware (`requireRole`, `requirePermission`)**:
-   - Asserts that `req.userContext.role` or `req.userContext.permissions` contains the required privilege.
-5. **Business Logic Execution**: Controller calls domain Service layer with validated input.
-6. **Audit Trail**: Sensitive actions trigger non-blocking, reliable entries in `audit_logs`.
-7. **Response Envelope**: Standard envelope emitted:
+1. **Authentication Verification**:
+   - `requireAuth` validates the Supabase JWT using `supabaseAdmin.auth.getUser(token)`.
+   - Checks if user exists and is active in `profiles`.
+   - Checks if user is recorded in `platform_admins`.
+   - Resolves organization membership from `organization_members`.
+   - **Suspension Gate**: If the user's organization is `SUSPENDED`, requests are immediately rejected with `403 FORBIDDEN_ORGANIZATION_SUSPENDED`.
+   - Populates typed `req.user` context.
+2. **Platform Admin Gate (`requirePlatformAdmin`)**:
+   - Asserts `req.user.isPlatformAdmin === true`. Rejects with `403 FORBIDDEN_PLATFORM_ADMIN` otherwise.
+3. **Role & Permission Guards (`requireRole`, `requirePermission`)**:
+   - Asserts that the authenticated member possesses the necessary role or granular permission within the organization.
+4. **Audit Trail**:
+   - Administrative mutations (organization provisioning, status changes, invitations, role changes) log an immutable entry in `audit_logs`.
+5. **Standardized JSON Envelope**:
    - Success: `{ "success": true, "message": "...", "data": {...} }`
    - Error: `{ "success": false, "message": "...", "error": { "code": "...", "details": ... } }`

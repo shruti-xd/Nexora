@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { authService } from '../services/authService';
-import { AuthContextType, UserProfile, Organization, Membership, RoleName, RegisterFormData } from '../types';
+import { AuthContextType, UserProfile, Organization, Membership, RoleName } from '../types';
 
 // =============================================================================
 // Auth Context & Provider
@@ -21,16 +21,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Step 1: Synchronize backend profile and organization state using the current Supabase token
   const refreshProfile = useCallback(async () => {
     try {
-      console.log('[AuthContext] Step 1: Refreshing user context from backend...');
+      console.log('[AuthContext] Step 1: Synchronizing authenticated user profile from backend...');
       const me = await authService.getMe();
-      console.log(`[AuthContext] Step 1: User context synchronized for ${me.user.email} (Role: ${me.membership.role})`);
+      console.log(
+        `[AuthContext] Step 1: Profile synchronized successfully for ${me.user.email} (Platform Admin: ${!!me.user.isPlatformAdmin}, Org: ${me.organization?.name || 'None'})`
+      );
       setUser(me.user);
       setOrganization(me.organization);
       setMembership(me.membership);
-      setRole(me.membership.role);
-      setPermissions(me.permissions);
+      setRole(me.membership?.role || (me.user.isPlatformAdmin ? 'ADMIN' : null));
+      setPermissions(me.permissions || []);
     } catch (err: unknown) {
-      console.warn('[AuthContext] Failed to fetch CRM profile from backend:', err);
+      console.warn('[AuthContext] Step 1: Failed to fetch CRM profile from backend:', err);
       setUser(null);
       setOrganization(null);
       setMembership(null);
@@ -39,46 +41,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  // Step 2: Initialize Supabase Auth session listener
+  // Step 2: Initialize Supabase Auth session listener with proper async lifecycle
   useEffect(() => {
     console.log('[AuthContext] Step 2: Initializing authentication session listener...');
     let isMounted = true;
 
-    const initializeAuth = async () => {
+    // Listen to Supabase auth events (INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, SIGNED_OUT)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log(`[AuthContext] Step 2.1: Supabase Auth event detected: ${event}`);
+
       try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        if (sessionData?.session && isMounted) {
-          console.log('[AuthContext] Existing active session found. Synchronizing profile...');
-          await refreshProfile();
-        } else if (isMounted) {
-          console.log('[AuthContext] No active session found.');
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          if (session && isMounted) {
+            console.log(`[AuthContext] Step 2.2: Active session found for event ${event}. Synchronizing profile...`);
+            await refreshProfile();
+          } else if (isMounted) {
+            console.log(`[AuthContext] Step 2.2: No active session found for event ${event}.`);
+            setUser(null);
+            setOrganization(null);
+            setMembership(null);
+            setRole(null);
+            setPermissions([]);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          console.log('[AuthContext] Step 2.3: User signed out. Resetting local auth state.');
+          setUser(null);
+          setOrganization(null);
+          setMembership(null);
+          setRole(null);
+          setPermissions([]);
         }
       } catch (err) {
-        console.error('[AuthContext] Error retrieving session:', err);
+        console.error('[AuthContext] Step 2: Error processing auth state change:', err);
       } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-
-    // Subscribe to auth state changes (SIGNED_IN, SIGNED_OUT, TOKEN_REFRESHED)
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`[AuthContext] Step 2: Supabase Auth event detected: ${event}`);
-
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        if (session) {
-          await refreshProfile();
+        if (isMounted) {
+          console.log('[AuthContext] Step 2.4: Session sync complete. Setting isLoading to false.');
+          setIsLoading(false);
         }
-      } else if (event === 'SIGNED_OUT') {
-        console.log('[AuthContext] User signed out. Resetting local state.');
-        setUser(null);
-        setOrganization(null);
-        setMembership(null);
-        setRole(null);
-        setPermissions([]);
       }
-      setIsLoading(false);
     });
 
     return () => {
@@ -89,7 +89,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Step 3: Login method integrating Supabase Auth password authentication
   const login = async (email: string, password: string): Promise<void> => {
-    console.log(`[AuthContext] Step 3: Logging in with email: ${email}`);
+    console.log(`[AuthContext] Step 3: Initiating login for user: ${email}`);
     setIsLoading(true);
 
     try {
@@ -99,11 +99,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (error) {
-        console.warn(`[AuthContext] Login failed: ${error.message}`);
+        console.warn(`[AuthContext] Step 3: Supabase signInWithPassword rejected: ${error.message}`);
         throw error;
       }
 
-      console.log('[AuthContext] Step 3: Supabase signInWithPassword succeeded. Synchronizing profile...');
+      console.log('[AuthContext] Step 3: Supabase signIn succeeded. Refreshing user profile context...');
       if (data.session) {
         await refreshProfile();
       }
@@ -112,47 +112,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Step 4: Register method calling backend atomic provisioning endpoint
-  const register = async (data: RegisterFormData): Promise<void> => {
-    console.log(`[AuthContext] Step 4: Submitting registration for email: ${data.email}`);
-    setIsLoading(true);
-
-    try {
-      const response = await authService.register(data);
-      console.log('[AuthContext] Step 4: Backend registration succeeded:', response);
-
-      // If backend returned session tokens, initialize Supabase session
-      if (response.session) {
-        await supabase.auth.setSession({
-          access_token: response.session.access_token,
-          refresh_token: response.session.refresh_token,
-        });
-      } else {
-        // Fallback login
-        await supabase.auth.signInWithPassword({
-          email: data.email.trim().toLowerCase(),
-          password: data.password,
-        });
-      }
-
-      await refreshProfile();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Step 5: Logout method ensuring clean local and server state termination
+  // Step 4: Logout method ensuring clean local and server state termination
   const logout = async (): Promise<void> => {
-    console.log('[AuthContext] Step 5: Terminating authentication session...');
+    console.log('[AuthContext] Step 4: Terminating authentication session...');
     setIsLoading(true);
 
     try {
-      // Notify backend for audit log
+      // Step 4.1: Notify backend for audit log
       await authService.logout();
     } catch (e) {
-      console.warn('[AuthContext] Backend logout notice failed (continuing client sign-out):', e);
+      console.warn('[AuthContext] Step 4.1: Backend logout audit failed (proceeding with local sign-out):', e);
     } finally {
-      // Sign out from Supabase Auth
+      // Step 4.2: Sign out from Supabase Auth
       await supabase.auth.signOut();
       setUser(null);
       setOrganization(null);
@@ -160,9 +131,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setRole(null);
       setPermissions([]);
       setIsLoading(false);
-      console.log('[AuthContext] Step 5: Logout sequence completed.');
+      console.log('[AuthContext] Step 4: Logout sequence completed successfully.');
     }
   };
+
+  // Platform Admin or active organization member is considered authenticated
+  const isPlatformAdmin = !!user?.isPlatformAdmin;
+  const isAuthenticated = !!user && (!!membership?.isActive || isPlatformAdmin);
 
   const value: AuthContextType = {
     user,
@@ -171,9 +146,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     role,
     permissions,
     isLoading,
-    isAuthenticated: !!user && !!membership?.isActive,
+    isAuthenticated,
+    isPlatformAdmin,
     login,
-    register,
     logout,
     refreshProfile,
   };

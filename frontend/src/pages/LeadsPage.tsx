@@ -148,7 +148,6 @@ export const LeadsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-<<<<<<< HEAD
       {/* Page Header with responsive, un-distorted button */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
@@ -156,15 +155,6 @@ export const LeadsPage: React.FC = () => {
             Leads
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5 line-clamp-1">
-=======
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-surface-900">
-            Leads
-          </h1>
-          <p className="text-sm text-surface-500 mt-0.5">
->>>>>>> 73aad5c41363fcb03fdbf4eceb9cfde8c4faf47e
             Click any Lead to open its dedicated Activity Timeline & custom fields.
           </p>
         </div>

@@ -104,18 +104,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
       </div>
 
       {/* Main Table Card */}
-<<<<<<< HEAD
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         {isLoading && leads.length === 0 ? (
           <div className="py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
             <span>Loading leads pipeline...</span>
           </div>
-=======
-      <div className="bg-white rounded-xl border border-surface-200/90 shadow-2xs overflow-hidden">
-        {isLoading ? (
-          <div className="py-12 text-center text-xs text-surface-500">Loading leads pipeline...</div>
->>>>>>> 73aad5c41363fcb03fdbf4eceb9cfde8c4faf47e
         ) : leads.length === 0 ? (
           <div className="py-12 text-center space-y-3">
             <h4 className="text-sm font-semibold text-surface-800">No leads found</h4>
@@ -194,15 +188,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                         )}
                         <button
                           type="button"
-<<<<<<< HEAD
                           onClick={() => onEditLead(lead)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
                           title="Edit Lead"
-=======
-                          onClick={() => onSelectLead(lead)}
-                          className="p-1.5 rounded-lg text-surface-400 hover:text-surface-700 hover:bg-surface-100 transition"
-                          title="Edit / View Lead"
->>>>>>> 73aad5c41363fcb03fdbf4eceb9cfde8c4faf47e
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
@@ -227,41 +215,12 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           </div>
         )}
 
-<<<<<<< HEAD
         {/* Infinite Scroll Sentinel & Loading Indicator */}
         <div ref={sentinelRef} className="py-4 text-center text-xs text-slate-500 border-t border-slate-100">
           {isLoadingMore ? (
             <div className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Loading more leads...</span>
-=======
-        {/* Pagination Footer */}
-        {totalLeads > 0 && (
-          <div className="p-3.5 border-t border-surface-200/80 bg-surface-50/50 flex items-center justify-between text-xs text-surface-600">
-            <span>
-              Showing {leads.length} of {totalLeads} total leads
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={currentPage <= 1}
-                onClick={() => onPageChange(currentPage - 1)}
-                className="px-3 py-1 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 disabled:opacity-50 transition"
-              >
-                Previous
-              </button>
-              <span className="font-semibold text-surface-900">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={currentPage >= totalPages}
-                onClick={() => onPageChange(currentPage + 1)}
-                className="px-3 py-1 rounded-lg border border-surface-200 bg-white hover:bg-surface-50 disabled:opacity-50 transition"
-              >
-                Next
-              </button>
->>>>>>> 73aad5c41363fcb03fdbf4eceb9cfde8c4faf47e
             </div>
           ) : !hasMore && leads.length > 0 ? (
             <span className="text-slate-400">All {totalLeads} leads loaded</span>

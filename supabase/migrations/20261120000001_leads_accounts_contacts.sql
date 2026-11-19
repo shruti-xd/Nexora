@@ -189,6 +189,10 @@ ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS converted_contact_id UUID REFE
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES public.profiles(id);
 ALTER TABLE public.leads ADD COLUMN IF NOT EXISTS owner_user_id UUID REFERENCES public.profiles(id);
 
+-- Drop legacy TitleCase check constraint if present and enforce uppercase check
+ALTER TABLE public.leads DROP CONSTRAINT IF EXISTS chk_lead_status;
+ALTER TABLE public.leads ADD CONSTRAINT chk_lead_status CHECK (UPPER(status) IN ('NEW', 'CONTACTED', 'QUALIFIED', 'UNQUALIFIED', 'CONVERTED'));
+
 -- Step 4: Triggers for automatic updated_at timestamps
 CREATE OR REPLACE TRIGGER update_accounts_updated_at
     BEFORE UPDATE ON public.accounts

@@ -31,6 +31,22 @@ export const LeadCreateModal: React.FC<LeadCreateModalProps> = ({
   const [estimatedValue, setEstimatedValue] = useState<number>(25000);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Clear form state whenever the modal opens
+  React.useEffect(() => {
+    if (isOpen) {
+      setFirstName('');
+      setLastName('');
+      setEmail('');
+      setPhone('');
+      setCompany('');
+      setTitle('');
+      setStatus('New');
+      setSource('Direct');
+      setEstimatedValue(25000);
+      setErrorMessage(null);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {

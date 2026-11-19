@@ -1,26 +1,26 @@
-import React from 'react';
-import { Search, Plus, Edit3, Trash2 } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Search, Edit3, Trash2, Loader2 } from 'lucide-react';
 import { Lead } from '../../../types/lead.types';
 import { LeadStatusBadge } from './LeadStatusBadge';
 
 // =============================================================================
 // Leads Table Component
-// Replicates the exact SaaS color palette and typography from the Kloudcodey spec
+// Main listing view with search, status filters, edit action, and infinite scrolling
 // =============================================================================
 
 interface LeadsTableProps {
   leads: Lead[];
   totalLeads: number;
-  currentPage: number;
-  totalPages: number;
+  hasMore: boolean;
+  isLoading: boolean;
+  isLoadingMore: boolean;
   searchTerm: string;
   statusFilter: string;
-  isLoading: boolean;
   onSearchChange: (val: string) => void;
   onStatusFilterChange: (status: string) => void;
-  onPageChange: (page: number) => void;
+  onLoadMore: () => void;
   onSelectLead: (lead: Lead) => void;
-  onOpenCreateModal: () => void;
+  onEditLead: (lead: Lead) => void;
   onOpenConvertModal: (lead: Lead) => void;
   onDeleteLead: (leadId: string) => void;
 }
@@ -28,20 +28,45 @@ interface LeadsTableProps {
 export const LeadsTable: React.FC<LeadsTableProps> = ({
   leads,
   totalLeads,
-  currentPage,
-  totalPages,
+  hasMore,
+  isLoading,
+  isLoadingMore,
   searchTerm,
   statusFilter,
-  isLoading,
   onSearchChange,
   onStatusFilterChange,
-  onPageChange,
+  onLoadMore,
   onSelectLead,
-  onOpenCreateModal,
+  onEditLead,
   onOpenConvertModal,
   onDeleteLead,
 }) => {
   const statuses = ['All', 'New', 'Contacted', 'Qualified', 'Converted'];
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  // Infinite scroll trigger via IntersectionObserver
+  useEffect(() => {
+    if (!hasMore || isLoading || isLoadingMore) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const target = sentinelRef.current;
+    if (target) {
+      observer.observe(target);
+    }
+
+    return () => {
+      if (target) observer.unobserve(target);
+      observer.disconnect();
+    };
+  }, [hasMore, isLoading, isLoadingMore, onLoadMore]);
 
   return (
     <div className="space-y-5">
@@ -80,8 +105,11 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
 
       {/* Main Table Card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        {isLoading ? (
-          <div className="py-12 text-center text-sm text-slate-500">Loading leads pipeline...</div>
+        {isLoading && leads.length === 0 ? (
+          <div className="py-12 text-center text-sm text-slate-500 flex items-center justify-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-indigo-600" />
+            <span>Loading leads pipeline...</span>
+          </div>
         ) : leads.length === 0 ? (
           <div className="py-12 text-center space-y-3">
             <h4 className="text-sm font-semibold text-slate-800">No leads found</h4>
@@ -160,9 +188,9 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
                         )}
                         <button
                           type="button"
-                          onClick={() => onSelectLead(lead)}
+                          onClick={() => onEditLead(lead)}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-                          title="Edit / View Lead"
+                          title="Edit Lead"
                         >
                           <Edit3 className="h-4 w-4" />
                         </button>
@@ -187,35 +215,17 @@ export const LeadsTable: React.FC<LeadsTableProps> = ({
           </div>
         )}
 
-        {/* Pagination Footer */}
-        {totalLeads > 0 && (
-          <div className="p-3.5 border-t border-slate-200 bg-slate-50/50 flex items-center justify-between text-xs text-slate-600">
-            <span>
-              Showing {leads.length} of {totalLeads} total leads
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                disabled={currentPage <= 1}
-                onClick={() => onPageChange(currentPage - 1)}
-                className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 transition"
-              >
-                Previous
-              </button>
-              <span className="font-semibold text-slate-800">
-                Page {currentPage} of {totalPages}
-              </span>
-              <button
-                type="button"
-                disabled={currentPage >= totalPages}
-                onClick={() => onPageChange(currentPage + 1)}
-                className="px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-50 transition"
-              >
-                Next
-              </button>
+        {/* Infinite Scroll Sentinel & Loading Indicator */}
+        <div ref={sentinelRef} className="py-4 text-center text-xs text-slate-500 border-t border-slate-100">
+          {isLoadingMore ? (
+            <div className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Loading more leads...</span>
             </div>
-          </div>
-        )}
+          ) : !hasMore && leads.length > 0 ? (
+            <span className="text-slate-400">All {totalLeads} leads loaded</span>
+          ) : null}
+        </div>
       </div>
     </div>
   );

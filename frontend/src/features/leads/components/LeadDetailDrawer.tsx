@@ -108,46 +108,48 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 backdrop-blur-[1px] animate-in fade-in duration-150">
-      <div className="w-full max-w-xl bg-white h-full shadow-2xl border-l border-surface-200 flex flex-col overflow-hidden">
-        {/* Drawer Header */}
-        <div className="p-5 bg-surface-900 text-white flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
-                Lead
-              </span>
-              <LeadStatusBadge status={lead.status} />
-            </div>
-            <h2 className="text-lg font-bold mt-2">
-              {lead.first_name} {lead.last_name}
-            </h2>
-            <p className="text-xs text-slate-300">
-              {lead.title ? `${lead.title} at ` : ''}
-              <strong>{lead.company}</strong> · {lead.email}
-            </p>
-          </div>
-
+    <div className="fixed top-0 right-0 bottom-0 z-40 w-full sm:max-w-xl bg-white shadow-2xl border-l border-slate-200 flex flex-col overflow-hidden animate-in slide-in-from-right duration-200">
+      {/* Drawer Header */}
+      <div className="p-5 bg-slate-900 text-white flex items-start justify-between gap-4">
+        <div>
           <div className="flex items-center gap-2">
-            {lead.status !== 'Converted' && (
-              <button
-                type="button"
-                onClick={() => onOpenConvertModal(lead)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition"
-              >
-                <Check className="w-3.5 h-3.5" />
-                <span>Convert</span>
-              </button>
-            )}
+            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/30 text-indigo-200 border border-indigo-400/30">
+              Lead
+            </span>
+            <LeadStatusBadge status={lead.status} />
+          </div>
+          <h2 className="text-lg font-bold mt-2">
+            {lead.first_name} {lead.last_name}
+          </h2>
+          <p className="text-xs text-slate-300">
+            {lead.title ? `${lead.title} at ` : ''}
+            <strong>{lead.company}</strong> · {lead.email}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {lead.status !== 'Converted' && (
             <button
               type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-lg text-surface-400 hover:text-white hover:bg-surface-800 transition"
+              onClick={() => {
+                onClose();
+                onOpenConvertModal(lead);
+              }}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-xs transition"
             >
-              <X className="h-5 w-5" />
+              <Check className="w-3.5 h-3.5" />
+              <span>Convert</span>
             </button>
-          </div>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
+      </div>
 
         {/* Navigation Tabs */}
         <div className="flex border-b border-slate-200 bg-slate-50 px-5">
@@ -338,6 +340,5 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
           )}
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };

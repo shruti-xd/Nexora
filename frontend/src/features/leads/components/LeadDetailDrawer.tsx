@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   Phone,
@@ -107,8 +108,8 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 backdrop-blur-[1px] animate-in fade-in duration-150">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex justify-end bg-surface-950/15 animate-in fade-in duration-150" style={{ top: 0, right: 0, bottom: 0, left: 0, height: '100vh' }}>
       <div className="w-full max-w-xl bg-white h-full shadow-2xl border-l border-surface-200 flex flex-col overflow-hidden">
         {/* Drawer Header */}
         <div className="p-5 bg-surface-900 text-white flex items-start justify-between gap-4">
@@ -338,6 +339,7 @@ export const LeadDetailDrawer: React.FC<LeadDetailDrawerProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

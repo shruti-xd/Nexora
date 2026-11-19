@@ -17,7 +17,7 @@ export const AuthLayout: React.FC = () => {
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <span className="font-bold text-lg tracking-tight text-surface-900 block leading-tight">Apex CRM</span>
+            <span className="font-bold text-lg tracking-tight text-surface-900 block leading-tight">Nexora CRM</span>
             <span className="text-[11px] font-medium text-surface-500 block uppercase tracking-wider">Enterprise Platform</span>
           </div>
         </Link>
@@ -32,7 +32,7 @@ export const AuthLayout: React.FC = () => {
 
       {/* Footer */}
       <footer className="py-6 text-center text-xs text-surface-500 border-t border-surface-200/60">
-        <p>&copy; {new Date().getFullYear()} Apex CRM Platform. Built with security and multi-tenancy at its core.</p>
+        <p>&copy; {new Date().getFullYear()} Nexora CRM Platform. Built with security and multi-tenancy at its core.</p>
       </footer>
     </div>
   );

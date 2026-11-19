@@ -105,3 +105,33 @@ export interface Account {
 }
 
 export type AccountFormData = Omit<Account, 'id' | 'organization_id' | 'created_at' | 'updated_at'>;
+
+export interface Contact {
+  id: string;
+  organization_id: string;
+  account_id: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  title: string | null;
+  is_decision_maker: boolean;
+  owner_id: string | null;
+  custom_fields: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  accounts?: { id: string; name: string } | null;
+  profiles?: { id: string; full_name: string; email: string } | null;
+}
+
+export interface ContactFormData {
+  account_id: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string | null;
+  title: string | null;
+  is_decision_maker: boolean;
+  owner_id: string | null;
+  custom_fields: Record<string, unknown>;
+}

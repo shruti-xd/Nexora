@@ -15,6 +15,7 @@ import { SettingsPage } from '../pages/SettingsPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { AccountsPage } from '../pages/AccountsPage';
 import { AccountDetailPage } from '../pages/AccountDetailPage';
+import { ContactsPage } from '../pages/ContactsPage';
 
 // =============================================================================
 // Application Routes
@@ -52,6 +53,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/users" element={<UsersPage />} />
         <Route path="/accounts" element={<AccountsPage />} />
         <Route path="/accounts/:id" element={<AccountDetailPage />} />
+        <Route path="/contacts" element={<ContactsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 

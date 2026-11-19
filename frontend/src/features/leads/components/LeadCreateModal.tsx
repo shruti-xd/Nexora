@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, UserPlus } from 'lucide-react';
 import { CreateLeadPayload, LeadStatus, LeadSource } from '../../../types/lead.types';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // =============================================================================
 // Lead Create Modal
@@ -20,6 +21,7 @@ export const LeadCreateModal: React.FC<LeadCreateModalProps> = ({
   onCreate,
   isSubmitting = false,
 }) => {
+  const { user } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -53,6 +55,7 @@ export const LeadCreateModal: React.FC<LeadCreateModalProps> = ({
         status,
         source,
         estimatedValue: Number(estimatedValue) || 0,
+        ownerId: user?.id,
       });
       onClose();
     } catch (err: unknown) {

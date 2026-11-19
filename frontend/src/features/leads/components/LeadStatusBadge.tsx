@@ -23,7 +23,7 @@ export const LeadStatusBadge: React.FC<LeadStatusBadgeProps> = ({ status }) => {
         return 'bg-indigo-50 text-indigo-700 border-indigo-300';
       case 'Unqualified':
       default:
-        return 'bg-slate-100 text-slate-700 border-slate-300';
+        return 'bg-surface-100 text-surface-700 border-surface-300';
     }
   };
 

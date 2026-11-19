@@ -30,7 +30,7 @@ export interface AccountFormProps {
 }
 
 export const AccountForm: React.FC<AccountFormProps> = ({ account, onSuccess, onCancel }) => {
-  const { organization } = useAuth();
+  const { organization, user } = useAuth();
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const {
@@ -85,7 +85,7 @@ export const AccountForm: React.FC<AccountFormProps> = ({ account, onSuccess, on
         industry: values.industry || null,
         city: values.city || null,
         tier: values.tier || 'Growth',
-        owner_id: account?.owner_id ?? null,
+        owner_id: account?.owner_id ?? user?.id ?? null,
         annual_revenue: revenue,
         employee_count: employeeCount,
         billing_address: values.billing_address || null,

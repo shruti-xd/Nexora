@@ -48,9 +48,9 @@ export const platformService = {
   },
 
   // Step 2: Retrieve single organization details
-  async getOrganization(id: string): Promise<PlatformOrganization> {
+  async getOrganization(id: string): Promise<import('../types').PlatformOrganizationDetailResponse> {
     console.log(`[platformService.getOrganization] Step 2: Fetching organization details for ID: ${id}`);
-    return request<PlatformOrganization>(`/platform/organizations/${id}`, {
+    return request<import('../types').PlatformOrganizationDetailResponse>(`/platform/organizations/${id}`, {
       method: 'GET',
     });
   },

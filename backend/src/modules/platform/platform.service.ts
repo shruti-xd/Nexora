@@ -47,7 +47,7 @@ export class PlatformService {
       .insert({
         name: dto.name,
         slug: finalSlug,
-        status: 'ACTIVE',
+        status: dto.status || 'ACTIVE',
         created_by: context.id,
       })
       .select('*')
@@ -250,6 +250,13 @@ export class PlatformService {
           status: org.status,
           memberCount: memberCount || 0,
           admin: adminProfile
+            ? {
+                id: (adminMember as any).user_id,
+                fullName: adminProfile.full_name,
+                email: adminProfile.email,
+              }
+            : null,
+          initialAdmin: adminProfile
             ? {
                 id: (adminMember as any).user_id,
                 fullName: adminProfile.full_name,

@@ -99,7 +99,10 @@ export const AppLayout: React.FC = () => {
 
   // Step 3: Determine page title based on current path
   const getPageTitle = () => {
-    if (location.pathname.startsWith('/platform/organizations')) return 'Platform Organizations';
+    if (location.pathname.startsWith('/platform-admin') || location.pathname.startsWith('/platform')) return 'Platform Administration';
+    if (location.pathname.startsWith('/leads')) return 'Leads Management';
+    if (location.pathname.startsWith('/accounts')) return 'Accounts Management';
+    if (location.pathname.startsWith('/contacts')) return 'Contacts Management';
     if (location.pathname.startsWith('/users')) return 'Team Members';
     if (location.pathname.startsWith('/settings')) return 'Workspace Settings';
     if (location.pathname.startsWith('/dashboard')) return 'Dashboard Overview';
@@ -171,20 +174,20 @@ export const AppLayout: React.FC = () => {
                 Platform Admin
               </p>
               <NavLink
-                to="/platform/organizations"
+                to="/platform-admin"
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors select-none',
                     isActive
-                      ? 'bg-brand-50 text-brand-700 font-semibold'
+                      ? 'bg-purple-50 text-purple-700 font-semibold'
                       : 'text-surface-600 hover:bg-surface-100 hover:text-surface-900'
                   )
                 }
               >
                 <div className="flex items-center gap-3">
-                  <Globe className="w-4 h-4 text-brand-600" />
-                  <span>Organizations</span>
+                  <ShieldCheck className="w-4 h-4 text-purple-600" />
+                  <span>Platform Console</span>
                 </div>
                 <Badge variant="purple" className="text-[10px] px-1.5 py-0 font-mono">
                   Console

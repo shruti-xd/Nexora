@@ -21,6 +21,7 @@ export interface CreateOrganizationDTO {
   slug?: string;
   adminFullName: string;
   adminEmail: string;
+  status?: OrganizationStatus;
 }
 
 export interface UpdateOrganizationDTO {

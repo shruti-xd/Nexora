@@ -103,6 +103,11 @@ export interface PlatformOrganization {
   createdAt: string;
   updatedAt: string;
   memberCount?: number;
+  admin?: {
+    id: string;
+    email: string;
+    fullName: string;
+  } | null;
   initialAdmin?: {
     id: string;
     email: string;
@@ -110,11 +115,24 @@ export interface PlatformOrganization {
   } | null;
 }
 
+export interface PlatformAdminUser {
+  userId: string;
+  fullName: string;
+  email: string;
+  isActive: boolean;
+}
+
+export interface PlatformOrganizationDetailResponse {
+  organization: PlatformOrganization;
+  administrators: PlatformAdminUser[];
+}
+
 export interface CreateOrganizationPayload {
   name: string;
   slug?: string;
   adminFullName: string;
   adminEmail: string;
+  status?: OrganizationStatus;
 }
 
 export interface UpdateOrganizationPayload {

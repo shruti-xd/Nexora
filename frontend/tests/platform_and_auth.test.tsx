@@ -53,12 +53,14 @@ describe('Platform Administration & Auth Architecture Tests', () => {
     const onAssignAdmin = vi.fn();
 
     render(
-      <OrganizationTable
-        organizations={mockOrgs}
-        isLoading={false}
-        onToggleStatus={onToggleStatus}
-        onAssignAdmin={onAssignAdmin}
-      />
+      <BrowserRouter>
+        <OrganizationTable
+          organizations={mockOrgs}
+          isLoading={false}
+          onToggleStatus={onToggleStatus}
+          onAssignAdmin={onAssignAdmin}
+        />
+      </BrowserRouter>
     );
 
     // Assert organization details are present
@@ -115,5 +117,22 @@ describe('Platform Administration & Auth Architecture Tests', () => {
     expect(screen.getByLabelText(/work email address/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/assigned role/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send invitation/i })).toBeInTheDocument();
+  });
+
+  it('Step 4: PlatformCreateOrgPage renders organization and administrator provisioning form', async () => {
+    console.log('[Test] Step 4: Testing PlatformCreateOrgPage form inputs and action button');
+    const { PlatformCreateOrgPage } = await import('../src/pages/PlatformCreateOrgPage');
+
+    render(
+      <BrowserRouter>
+        <PlatformCreateOrgPage />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByText(/create new organization/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/organization name \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/full name \*/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/work email address \*/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create organization & invite admin/i })).toBeInTheDocument();
   });
 });

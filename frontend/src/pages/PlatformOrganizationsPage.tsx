@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { platformService } from '../services/platformService';
 import { PlatformOrganization, PaginationMeta } from '../types';
 import { OrganizationTable } from '../features/platform/OrganizationTable';
@@ -16,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  PlusCircle,
 } from 'lucide-react';
 
 // =============================================================================
@@ -24,6 +26,7 @@ import {
 // =============================================================================
 
 export const PlatformOrganizationsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [organizations, setOrganizations] = useState<PlatformOrganization[]>([]);
   const [pagination, setPagination] = useState<PaginationMeta>({
     page: 1,
@@ -88,13 +91,13 @@ export const PlatformOrganizationsPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full uppercase tracking-wider">
               <ShieldCheck className="w-3 h-3" />
               Platform Console
             </span>
           </div>
           <h2 className="text-xl font-bold text-surface-900 tracking-tight flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-brand-600" />
+            <Building2 className="w-5 h-5 text-purple-600" />
             Tenant Organizations
           </h2>
           <p className="text-xs text-surface-500 mt-1">
@@ -102,10 +105,23 @@ export const PlatformOrganizationsPage: React.FC = () => {
           </p>
         </div>
 
-        <Button onClick={() => setIsCreateOpen(true)} className="shadow-xs self-start sm:self-auto">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Provision Organization
-        </Button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            onClick={() => setIsCreateOpen(true)}
+            className="text-xs"
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            Quick Modal
+          </Button>
+          <Button
+            onClick={() => navigate('/platform-admin/organizations/new')}
+            className="shadow-xs text-xs bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <PlusCircle className="w-4 h-4 mr-1.5" />
+            Create Organization
+          </Button>
+        </div>
       </div>
 
       {/* Filter and Search Bar */}
@@ -119,7 +135,7 @@ export const PlatformOrganizationsPage: React.FC = () => {
               placeholder="Search by organization name or slug..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-white border border-surface-300 rounded-lg text-xs text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 shadow-xs"
+              className="w-full pl-9 pr-4 py-2 bg-white border border-surface-300 rounded-lg text-xs text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 shadow-xs"
             />
           </form>
 
@@ -132,7 +148,7 @@ export const PlatformOrganizationsPage: React.FC = () => {
                 setStatusFilter(e.target.value);
                 setPagination((prev) => ({ ...prev, page: 1 }));
               }}
-              className="px-2.5 py-2 bg-white border border-surface-300 rounded-lg text-xs text-surface-800 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="px-2.5 py-2 bg-white border border-surface-300 rounded-lg text-xs text-surface-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
             >
               <option value="ALL">All Statuses</option>
               <option value="ACTIVE">Active</option>
@@ -170,6 +186,7 @@ export const PlatformOrganizationsPage: React.FC = () => {
         isLoading={isLoading}
         onToggleStatus={(org) => setStatusOrg(org)}
         onAssignAdmin={(org) => setAssignAdminOrg(org)}
+        onViewDetails={(org) => navigate(`/platform-admin/organizations/${org.id}`)}
       />
 
       {/* Pagination Controls */}
@@ -231,7 +248,7 @@ export const PlatformOrganizationsPage: React.FC = () => {
         onClose={() => setAssignAdminOrg(null)}
         org={assignAdminOrg}
         onSuccess={() => {
-          setSuccessNotice('Administrator assigned and invitation dispatched successfully!');
+          setSuccessNotice('Organization administrator assigned successfully!');
           setTimeout(() => setSuccessNotice(null), 5000);
           loadOrganizations(pagination.page, searchTerm, statusFilter);
         }}

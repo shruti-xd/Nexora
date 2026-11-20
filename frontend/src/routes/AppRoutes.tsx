@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthLayout } from '../layouts/AuthLayout';
 import { AppLayout } from '../layouts/AppLayout';
+import { PlatformAdminLayout } from '../layouts/PlatformAdminLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { PublicRoute } from './PublicRoute';
 import { PlatformRoute } from './PlatformRoute';
@@ -11,7 +12,10 @@ import { ResetPasswordPage } from '../pages/ResetPasswordPage';
 import { DashboardPlaceholderPage } from '../pages/DashboardPlaceholderPage';
 import { UsersPage } from '../pages/UsersPage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { PlatformOverviewPage } from '../pages/PlatformOverviewPage';
 import { PlatformOrganizationsPage } from '../pages/PlatformOrganizationsPage';
+import { PlatformCreateOrgPage } from '../pages/PlatformCreateOrgPage';
+import { PlatformOrgDetailPage } from '../pages/PlatformOrgDetailPage';
 import { LeadsPage } from '../pages/LeadsPage';
 import { LeadDetailPage } from '../pages/LeadDetailPage';
 import { AccountsPage } from '../pages/AccountsPage';
@@ -63,25 +67,35 @@ export const AppRoutes: React.FC = () => {
         {/* Step 2.2: Team Members & Settings */}
         <Route path="/users" element={<UsersPage />} />
         <Route path="/settings" element={<SettingsPage />} />
-
-        {/* Step 3: Platform Administrator Exclusive Console */}
-        <Route
-          path="/platform"
-          element={
-            <PlatformRoute>
-              <Navigate to="/platform/organizations" replace />
-            </PlatformRoute>
-          }
-        />
-        <Route
-          path="/platform/organizations"
-          element={
-            <PlatformRoute>
-              <PlatformOrganizationsPage />
-            </PlatformRoute>
-          }
-        />
       </Route>
+
+      {/* Step 3: Platform Administrator Exclusive Area (/platform-admin) */}
+      <Route
+        path="/platform-admin"
+        element={
+          <PlatformRoute>
+            <PlatformAdminLayout />
+          </PlatformRoute>
+        }
+      >
+        {/* Step 3.1: Overview Dashboard */}
+        <Route index element={<PlatformOverviewPage />} />
+        <Route path="overview" element={<Navigate to="/platform-admin" replace />} />
+
+        {/* Step 3.2: Organizations Listing */}
+        <Route path="organizations" element={<PlatformOrganizationsPage />} />
+
+        {/* Step 3.3: Create Organization */}
+        <Route path="organizations/new" element={<PlatformCreateOrgPage />} />
+
+        {/* Step 3.4: Organization Details */}
+        <Route path="organizations/:id" element={<PlatformOrgDetailPage />} />
+      </Route>
+
+      {/* Step 3.5: Legacy /platform redirection aliases */}
+      <Route path="/platform" element={<Navigate to="/platform-admin" replace />} />
+      <Route path="/platform/organizations" element={<Navigate to="/platform-admin/organizations" replace />} />
+      <Route path="/platform/organizations/*" element={<Navigate to="/platform-admin/organizations" replace />} />
 
       {/* Step 4: Fallback 404 Route */}
       <Route path="*" element={<NotFoundPage />} />

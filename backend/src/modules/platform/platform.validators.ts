@@ -28,6 +28,7 @@ export const createOrganizationSchema = z.object({
     .trim()
     .toLowerCase()
     .email('Please enter a valid email address'),
+  status: z.enum(['ACTIVE', 'SUSPENDED']).optional(),
 });
 
 export const updatePlatformOrganizationSchema = z.object({

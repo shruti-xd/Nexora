@@ -1,8 +1,9 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PlatformOrganization } from '../../types';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Building2, ShieldAlert, ShieldCheck, UserCheck, RefreshCw } from 'lucide-react';
+import { Building2, ShieldAlert, ShieldCheck, UserCheck, RefreshCw, Eye, User } from 'lucide-react';
 
 // =============================================================================
 // Platform Organizations Table
@@ -14,6 +15,7 @@ export interface OrganizationTableProps {
   isLoading: boolean;
   onToggleStatus: (org: PlatformOrganization) => void;
   onAssignAdmin: (org: PlatformOrganization) => void;
+  onViewDetails?: (org: PlatformOrganization) => void;
 }
 
 export const OrganizationTable: React.FC<OrganizationTableProps> = ({
@@ -21,7 +23,20 @@ export const OrganizationTable: React.FC<OrganizationTableProps> = ({
   isLoading,
   onToggleStatus,
   onAssignAdmin,
+  onViewDetails,
 }) => {
+  const navigate = useNavigate();
+
+  // Step 1: Handle navigation to organization details page
+  const handleViewDetails = (org: PlatformOrganization) => {
+    console.log(`[OrganizationTable] Step 1: Navigating to details for org: ${org.id}`);
+    if (onViewDetails) {
+      onViewDetails(org);
+    } else {
+      navigate(`/platform-admin/organizations/${org.id}`);
+    }
+  };
+
   return (
     <div className="bg-white border border-surface-200 rounded-xl shadow-xs overflow-hidden">
       <div className="overflow-x-auto">
@@ -30,6 +45,7 @@ export const OrganizationTable: React.FC<OrganizationTableProps> = ({
             <tr className="bg-surface-50/75 border-b border-surface-200 text-[11px] font-semibold text-surface-600 uppercase tracking-wider">
               <th className="py-3 px-4">Organization</th>
               <th className="py-3 px-4">Status</th>
+              <th className="py-3 px-4">Initial Administrator</th>
               <th className="py-3 px-4">Members</th>
               <th className="py-3 px-4">Created Date</th>
               <th className="py-3 px-4 text-right">Actions</th>
@@ -38,20 +54,21 @@ export const OrganizationTable: React.FC<OrganizationTableProps> = ({
           <tbody className="divide-y divide-surface-100 text-xs">
             {isLoading ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-surface-500">
+                <td colSpan={6} className="py-12 text-center text-surface-500">
                   <RefreshCw className="w-6 h-6 animate-spin mx-auto text-brand-600 mb-2" />
                   Loading platform organizations...
                 </td>
               </tr>
             ) : organizations.length === 0 ? (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-surface-500">
+                <td colSpan={6} className="py-12 text-center text-surface-500">
                   No organizations found matching your search criteria.
                 </td>
               </tr>
             ) : (
               organizations.map((org) => {
                 const isActive = org.status === 'ACTIVE';
+                const admin = org.initialAdmin || org.admin;
 
                 return (
                   <tr key={org.id} className="hover:bg-surface-50/50 transition-colors">
@@ -62,9 +79,13 @@ export const OrganizationTable: React.FC<OrganizationTableProps> = ({
                           <Building2 className="w-4 h-4 text-surface-500" />
                         </div>
                         <div className="min-w-0">
-                          <span className="font-semibold text-surface-900 block truncate">
+                          <button
+                            type="button"
+                            onClick={() => handleViewDetails(org)}
+                            className="font-semibold text-surface-900 hover:text-brand-600 text-left block truncate transition-colors"
+                          >
                             {org.name}
-                          </span>
+                          </button>
                           <span className="text-surface-500 text-[11px] font-mono block truncate">
                             /{org.slug}
                           </span>
@@ -87,6 +108,27 @@ export const OrganizationTable: React.FC<OrganizationTableProps> = ({
                       )}
                     </td>
 
+                    {/* Initial Administrator */}
+                    <td className="py-3.5 px-4">
+                      {admin ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-full bg-brand-50 border border-brand-200 flex items-center justify-center text-brand-700 flex-shrink-0">
+                            <User className="w-3 h-3" />
+                          </div>
+                          <div className="min-w-0">
+                            <span className="font-medium text-surface-900 block truncate">
+                              {admin.fullName || 'Administrator'}
+                            </span>
+                            <span className="text-surface-500 text-[11px] block truncate">
+                              {admin.email}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-surface-400 italic text-[11px]">Unassigned</span>
+                      )}
+                    </td>
+
                     {/* Member Count */}
                     <td className="py-3.5 px-4">
                       <Badge variant="default" className="text-[11px] font-mono">
@@ -106,6 +148,17 @@ export const OrganizationTable: React.FC<OrganizationTableProps> = ({
                     {/* Governance Actions */}
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetails(org)}
+                          title="View organization details"
+                          className="text-xs text-brand-600 hover:text-brand-700 hover:bg-brand-50"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" />
+                          Details
+                        </Button>
+
                         <Button
                           variant="ghost"
                           size="sm"
